@@ -5,6 +5,11 @@ A library for interacting with Tritium systems.
 - Connects to a running Tritium system via the Gateway node, initially by WebSocket only
 - Uses GraphQL to send commands and request data
 
+Implemented in Rust but with bindings to
+
+- Python
+- C/C++
+
 ## APIs
 
 # Sequence playback
