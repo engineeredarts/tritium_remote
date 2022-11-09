@@ -12,11 +12,11 @@ Implemented in Rust but with bindings to
 
 ## APIs
 
-# Sequence playback
+### Sequence playback
 
 - Start & stop sequence
 
-# Scripting
+### Scripting
 
 - Start & stop scripts
 - Send and receive arbitrary messages via bidirectional byte stream
