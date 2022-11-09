@@ -1,2 +1,2 @@
 [workspace]
-members = ["tritium-remote"]
+members = ["tritium-remote", "mock-tritium-gateway"]
