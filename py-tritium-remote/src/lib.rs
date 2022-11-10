@@ -8,7 +8,7 @@ async fn rust_sleep() {
 
 #[pyfunction]
 fn call_rust_sleep(py: Python) -> PyResult<&PyAny> {
-    pyo3_asyncio::async_std::future_into_py(py, async move {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
         rust_sleep().await;
         Ok(())
     })
