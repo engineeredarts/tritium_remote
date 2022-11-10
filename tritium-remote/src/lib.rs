@@ -3,7 +3,7 @@ pub struct Connection {
     pub open: bool,
 }
 
-pub fn connect(address: &str) -> Connection {
+pub async fn connect(address: &str) -> Connection {
     Connection {
         address: String::from(address),
         open: true,
