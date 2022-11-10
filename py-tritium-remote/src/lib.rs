@@ -3,9 +3,9 @@ use std::time::Duration;
 use tritium_remote;
 
 #[pyfunction]
-fn connect(py: Python) -> PyResult<&PyAny> {
+fn connect(py: Python, url: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        tritium_remote::connect("ws://localhost:1234").await;
+        tritium_remote::connect(&url).await;
         Ok(())
     })
 }
