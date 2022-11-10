@@ -1,11 +1,16 @@
+use tokio_tungstenite::connect_async;
+
 pub struct Connection {
-    pub address: String,
+    pub url: String,
     pub open: bool,
 }
 
-pub async fn connect(address: &str) -> Connection {
+pub async fn connect(url: &str) -> Connection {
+    let (_ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+    println!("WebSocket handshake has been successfully completed");
+
     Connection {
-        address: String::from(address),
+        url: String::from(url),
         open: true,
     }
 }
