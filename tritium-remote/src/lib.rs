@@ -4,16 +4,11 @@ pub struct Connection {
 }
 
 pub fn connect(address: &str) -> Connection {
-
     Connection {
         address: String::from(address),
-        open: true
+        open: true,
     }
 }
-
-
-
-
 
 // pub fn add(left: usize, right: usize) -> usize {
 //     left + right
