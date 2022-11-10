@@ -1,7 +1,7 @@
 use tokio_tungstenite::connect_async;
 
 pub struct Connection {
-    pub url: String,
+    // pub url: String,
     pub open: bool,
 }
 
@@ -10,7 +10,7 @@ pub async fn connect(url: &str) -> Connection {
     println!("WebSocket handshake has been successfully completed");
 
     Connection {
-        url: String::from(url),
+        // url: String::from(url),
         open: true,
     }
 }

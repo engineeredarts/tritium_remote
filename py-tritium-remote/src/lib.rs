@@ -1,5 +1,14 @@
 use pyo3::prelude::*;
 use std::time::Duration;
+use tritium_remote;
+
+#[pyfunction]
+fn connect(py: Python) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
+        tritium_remote::connect("ws://localhost:1234").await;
+        Ok(())
+    })
+}
 
 /// Sleep for 1 second
 async fn rust_sleep() {
@@ -23,6 +32,7 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn py_tritium_remote(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(connect, m)?)?;
     m.add_function(wrap_pyfunction!(call_rust_sleep, m)?)?;
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     Ok(())

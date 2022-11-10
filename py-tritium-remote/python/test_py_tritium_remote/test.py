@@ -5,8 +5,9 @@ print("sum_as_string", py_tritium_remote.sum_as_string(1, 1))
 
 
 async def main():
-    print("awaiting call_rust_sleep...")
-    await py_tritium_remote.call_rust_sleep()
+    print("awaiting connect...")
+    # await py_tritium_remote.connect("ws://localhost:1234")
+    await py_tritium_remote.connect()
     print("...done")
 
 
