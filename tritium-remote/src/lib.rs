@@ -1,31 +1,38 @@
-use tokio_tungstenite::connect_async;
+use async_tungstenite::tokio::connect_async;
+use async_tungstenite::tungstenite::protocol::Message;
+use futures::StreamExt;
+use futures_util::sink::Sink;
+use futures_util::SinkExt;
 
 pub struct Connection {
-    // pub url: String,
-    pub open: bool,
+    sink: Box<dyn Sink<Message, Error = tungstenite::error::Error>>,
 }
 
 pub async fn connect(url: &str) -> Connection {
-    let (_ws_stream, _) = connect_async(url).await.expect("Failed to connect");
-    println!("WebSocket handshake has been successfully completed");
+    println!("[tritium-remote] connecting to {}...", url);
+    let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+    println!("[tritium-remote] CONNECTED");
+
+    let (sink, _stream) = ws_stream.split();
 
     Connection {
-        // url: String::from(url),
-        open: true,
+        sink: Box::new(sink),
     }
 }
 
-// pub fn add(left: usize, right: usize) -> usize {
-//     left + right
-// }
+#[derive(Debug, Clone)]
+pub struct TritiumError;
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+pub async fn do_something(connection: &Connection) -> Result<(), TritiumError> {
+    println!("[tritium-remote] do_something");
+    send(connection, "do_something")?;
+    Ok(())
+}
 
-//     #[test]
-//     fn it_works() {
-//         let result = add(2, 2);
-//         assert_eq!(result, 4);
-//     }
-// }
+fn send(connection: &Connection, text: &str) -> Result<(), TritiumError> {
+    let m = Message::text("do_something");
+
+    Box::pin(connection.sink).send(m);
+
+    Ok(())
+}
