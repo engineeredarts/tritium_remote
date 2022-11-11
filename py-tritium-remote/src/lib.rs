@@ -1,14 +1,36 @@
 use pyo3::prelude::*;
 use std::time::Duration;
-use tritium_remote;
+// use tritium_remote;
+
+#[pyclass]
+pub struct TritiumConnection {
+    #[pyo3(get, set)]
+    pub foo: i32,
+}
+
+async fn mock_async_connect(url: &str) -> TritiumConnection {
+    println!("pretending to connect to {}", url);
+    async_std::task::sleep(Duration::from_secs(1)).await;
+
+    TritiumConnection { foo: 123 }
+}
 
 #[pyfunction]
 fn connect(py: Python, url: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        tritium_remote::connect(&url).await;
-        Ok(())
+        let c = mock_async_connect(&url).await;
+
+        Ok(c)
     })
 }
+
+// #[pyfunction]
+// fn connect(py: Python, url: String, on_connect: &PyAny) -> PyResult<&PyAny> {
+//     pyo3_asyncio::tokio::future_into_py(py, async move {
+//         tritium_remote::connect(&url).await;
+//         Ok(())
+//     })
+// }
 
 /// Sleep for 1 second
 async fn rust_sleep() {
