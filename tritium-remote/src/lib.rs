@@ -5,16 +5,15 @@ use error::TritiumError;
 // use tungstenite;
 use tokio;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures_util::{StreamExt,SinkExt};
-use futures::channel;
+use futures_util::{StreamExt};
 
 // use tokio::io::{AsyncReadExt, AsyncWriteExt};
 // use tokio::select;
-// use tokio::sync::mpsc;
-// use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 pub struct Connection {
-   sender: channel::mpsc::UnboundedSender<Message>
+   sender: mpsc::UnboundedSender<Message>
 }
 
 // struct ConnectInner {
@@ -28,15 +27,15 @@ pub async fn connect(url: &str) -> Connection {
     println!("[tritium-remote] CONNECTED");
 
     let (sink, _stream) = ws_stream.split();
-    // let (send_channel_tx, send_channel_rx) = mpsc::unbounded_channel::<Message>();
-    // let send_channel_rx_stream = UnboundedReceiverStream::new(send_channel_rx);
+    let (send_channel_tx, send_channel_rx) = mpsc::unbounded_channel::<Message>();
+    let send_channel_rx_stream = UnboundedReceiverStream::new(send_channel_rx);
     // let send_to_ws = send_channel_rx_stream.map(Ok).forward(sink);
 
 
 //    tokio::spawn(loop_forever(send_channel_rx, sink)); 
 
-    let (send_channel_tx, send_channel_rx) = channel::mpsc::unbounded::<Message>();
-    tokio::spawn(send_channel_rx.map(Ok).forward(sink));
+    // let (send_channel_tx, send_channel_rx) = channel::mpsc::unbounded::<Message>();
+    tokio::spawn(send_channel_rx_stream.map(Ok).forward(sink));
 
     // send_channel_tx.send(Message::text("hello again")).await.unwrap();
 
@@ -55,16 +54,16 @@ pub async fn connect(url: &str) -> Connection {
 //     }
 // }
 
-pub async fn do_something(connection: &mut Connection) -> Result<(), TritiumError> {
+pub async fn do_something(connection: &Connection) -> Result<(), TritiumError> {
     println!("[tritium-remote] do_something");
     send(connection, "do_something").await?;
     Ok(())
 }
 
-async fn send(connection: &mut Connection, text: &str) -> Result<(), TritiumError> {
+async fn send(connection: &Connection, text: &str) -> Result<(), TritiumError> {
     let m = Message::text(text);
 
-    connection.sender.send(m).await.map_err(|_e| TritiumError::comms_from_str("boo"))?;
+    connection.sender.send(m)?;
 
     Ok(())
 }

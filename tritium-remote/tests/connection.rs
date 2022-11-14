@@ -8,8 +8,8 @@ async fn it_connects() {
 
 #[tokio::test]
 async fn it_does_something() {
-    let mut c = tritium_remote::connect("ws://localhost:1234").await;
-    tritium_remote::do_something(&mut c).await.unwrap();
+    let c = tritium_remote::connect("ws://localhost:1234").await;
+    tritium_remote::do_something(&c).await.unwrap();
 
     sleep(Duration::from_millis(100)).await;
 
