@@ -1,6 +1,16 @@
-use tritium_remote::connect;
+use tokio::time::{sleep, Duration};
+use tritium_remote;
 
 #[tokio::test]
 async fn it_connects() {
-    let c = connect("ws://localhost:1234").await;
+    tritium_remote::connect("ws://localhost:1234").await;
+}
+
+#[tokio::test]
+async fn it_does_something() {
+    let mut c = tritium_remote::connect("ws://localhost:1234").await;
+    tritium_remote::do_something(&mut c).await.unwrap();
+
+    sleep(Duration::from_millis(100)).await;
+
 }
