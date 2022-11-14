@@ -7,7 +7,10 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "*"
 tungstenite = { version = "*" }
-async-tungstenite = { version = "*", features=["tokio-runtime"] }
+# async-tungstenite = { version = "*", features=["tokio-runtime"] }
+tokio-tungstenite = '*'
 futures = "*"
 futures-util = "*"
+thiserror = "1"

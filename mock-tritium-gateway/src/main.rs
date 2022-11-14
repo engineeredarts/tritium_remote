@@ -14,6 +14,8 @@ fn main () {
             loop {
                 let msg = websocket.read_message().unwrap();
 
+                println!("msg: {}", msg);
+
                 // We do not want to send back ping/pong messages.
                 if msg.is_binary() || msg.is_text() {
                     websocket.write_message(msg).unwrap();
