@@ -1,46 +1,44 @@
 use pyo3::prelude::*;
-use std::time::Duration;
-// use tritium_remote;
+use tritium_remote;
 
 #[pyclass]
 pub struct TritiumConnection {
-    #[pyo3(get, set)]
-    pub foo: i32,
+    pub inner: tritium_remote::Connection
+
+    // #[pyo3(get, set)]
+    // pub foo: i32,
 }
 
-async fn mock_async_connect(url: &str) -> TritiumConnection {
-    println!("pretending to connect to {}", url);
-    async_std::task::sleep(Duration::from_secs(1)).await;
+// async fn mock_async_connect(url: &str) -> TritiumConnection {
+//     println!("pretending to connect to {}", url);
+//     async_std::task::sleep(Duration::from_secs(1)).await;
 
-    TritiumConnection { foo: 123 }
-}
+//     TritiumConnection { foo: 123 }
+// }
+
+// #[pyfunction]
+// fn connect(py: Python, url: String) -> PyResult<&PyAny> {
+//     pyo3_asyncio::tokio::future_into_py(py, async move {
+//         let c = mock_async_connect(&url).await;
+
+//         Ok(c)
+//     })
+// }
 
 #[pyfunction]
 fn connect(py: Python, url: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        let c = mock_async_connect(&url).await;
-
-        Ok(c)
+        let connection = tritium_remote::connect(&url).await;
+        Ok(TritiumConnection {
+            inner:connection
+        })
     })
 }
 
-// #[pyfunction]
-// fn connect(py: Python, url: String, on_connect: &PyAny) -> PyResult<&PyAny> {
-//     pyo3_asyncio::tokio::future_into_py(py, async move {
-//         tritium_remote::connect(&url).await;
-//         Ok(())
-//     })
-// }
-
-/// Sleep for 1 second
-async fn rust_sleep() {
-    async_std::task::sleep(Duration::from_secs(1)).await;
-}
-
 #[pyfunction]
-fn call_rust_sleep(py: Python) -> PyResult<&PyAny> {
+fn do_something(py: Python, connection: ???) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        rust_sleep().await;
+        tritium_remote::do_something(connection.inner).await;
         Ok(())
     })
 }
@@ -55,7 +53,6 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 #[pymodule]
 fn py_tritium_remote(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(connect, m)?)?;
-    m.add_function(wrap_pyfunction!(call_rust_sleep, m)?)?;
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+    m.add_function(wrap_pyfunction!(do_something, m)?)?;
     Ok(())
 }
