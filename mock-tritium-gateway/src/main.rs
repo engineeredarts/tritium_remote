@@ -4,21 +4,20 @@ use tungstenite::accept;
 use tungstenite::Message;
 
 use serde::Serialize;
-use tinytemplate::TinyTemplate;
+use tinytemplate::{format_unescaped, TinyTemplate};
 
-static HELLO_WORLD: &str = "hello_world";
+static GRAPHQL_RESPONSE: &str = "GRAPHQL_RESPONSE";
 
-static HELLO_WORLD_RESPONSE_TEMPLATE: &str = r#"\{
+static GRAPHQL_RESPONSE_TEMPLATE: &str = r#"\{
     "type": "graphql_response",
     "request_id:": {request_id},
-    "data": \{
-        "hello": "Hello World!"
-    } 
+    "data": { data_json } 
 }"#;
 
 #[derive(Serialize)]
 struct Context {
     request_id: i32,
+    data_json: String,
 }
 
 /// A WebSocket echo server
@@ -30,7 +29,9 @@ fn main() {
     for stream in server.incoming() {
         spawn(move || {
             let mut tt = TinyTemplate::new();
-            tt.add_template(HELLO_WORLD, HELLO_WORLD_RESPONSE_TEMPLATE)
+            tt.set_default_formatter(&format_unescaped);
+
+            tt.add_template(GRAPHQL_RESPONSE, GRAPHQL_RESPONSE_TEMPLATE)
                 .unwrap();
 
             let mut websocket = accept(stream.unwrap()).unwrap();
@@ -45,14 +46,12 @@ fn main() {
 
                 println!("msg: {}", msg);
 
-                // We do not want to send back ping/pong messages.
-                // if msg.is_binary() || msg.is_text() {
-                //     websocket.write_message(msg).unwrap();
-                // }
-
                 if msg.is_text() {
-                    let context = Context { request_id: 123 };
-                    let reply = tt.render(HELLO_WORLD, &context).unwrap();
+                    let context = Context {
+                        request_id: 123,
+                        data_json: r#"{ "hello": "Hello World!" }"#.to_string(),
+                    };
+                    let reply = tt.render(GRAPHQL_RESPONSE, &context).unwrap();
                     println!("reply: {}", reply);
                     websocket.write_message(Message::text(reply)).unwrap();
                 }
