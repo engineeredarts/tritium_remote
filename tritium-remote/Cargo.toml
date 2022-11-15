@@ -9,8 +9,8 @@ edition = "2021"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "*"
 tungstenite = { version = "*" }
-# async-tungstenite = { version = "*", features=["tokio-runtime"] }
-tokio-tungstenite = '*'
+async-tungstenite = { version = "*", features=["tokio-runtime"] }
 futures = "*"
 futures-util = "*"
 thiserror = "1"
+graphql_client = "*"
