@@ -40,16 +40,16 @@ pub struct GatewayGraphQLClient {}
 
 // type OperationMap<GenericResponse> = Arc<Mutex<HashMap<Uuid, OperationSender<GenericResponse>>>>;
 
-async fn receiver_loop<M, S, E>(
-    message_stream: mpsc::Receiver<M>,
-    mut ws_sender: S,
-    // operations: OperationMap<GenericResponse>,
-    shutdown: oneshot::Receiver<()>,
+async fn receiver_loop<S, WsMessage, GraphqlClient>(
+    mut receiver: S,
+    mut sender: mpsc::Sender<WsMessage>,
+    operations: OperationMap<GraphqlClient::Response>,
+    shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error>
 where
-    M: WebsocketMessage,
-    S: Sink<M, Error = E> + Unpin,
-    E: std::error::Error,
+    S: Stream<Item = Result<WsMessage, WsMessage::Error>> + Unpin,
+    WsMessage: WebsocketMessage,
+    GraphqlClient: crate::graphql::GraphqlClient,
 {
     while let Some(msg) = receiver.next().await {
         trace!("Received message: {:?}", msg);
