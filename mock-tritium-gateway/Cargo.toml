@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 tungstenite = "0.17.3"
+serde = { version = "1.0", features = ["derive"] }
+tinytemplate = "1"
