@@ -134,7 +134,7 @@ async fn sender_loop(
                 while message_stream.next().await.is_some() {}
 
                 // Clear out any operations
-                // operations.lock().await.clear();
+                operations.lock().await.clear();
 
                 return Ok(());
             }
