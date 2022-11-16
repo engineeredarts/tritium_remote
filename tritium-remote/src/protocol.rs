@@ -1,5 +1,5 @@
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Serialize, Debug)]
 #[serde(tag = "type")]
 pub enum MessageToGateway<Response> {
     #[serde(rename = "graphql")]

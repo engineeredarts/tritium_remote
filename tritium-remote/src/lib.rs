@@ -1,50 +1,42 @@
+use futures::StreamExt;
 mod client;
 mod protocol;
+mod tokio_spawner;
 
 mod error;
 use error::TritiumError;
 
-// use tungstenite;
 use async_tungstenite;
-use futures_util::StreamExt;
-use tokio;
-use tungstenite::protocol::Message;
 
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use client::{GatewayGraphQLClient, GatewayGraphQLClientBuilder};
 
 pub struct Connection {
-    sender: mpsc::UnboundedSender<Message>,
+    client: GatewayGraphQLClient,
 }
 
 pub async fn connect(url: &str) -> Connection {
-    println!("[tritium-remote] connecting to {}...", url);
     let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
         .await
         .expect("Failed to connect");
-    println!("[tritium-remote] CONNECTED");
 
-    let (sink, _stream) = ws_stream.split();
-    let (send_channel_tx, send_channel_rx) = mpsc::unbounded_channel::<Message>();
-    let send_channel_rx_stream = UnboundedReceiverStream::new(send_channel_rx);
+    let (sink, stream) = ws_stream.split();
 
-    tokio::spawn(send_channel_rx_stream.map(Ok).forward(sink));
+    let mut client = GatewayGraphQLClientBuilder::new()
+        .build(stream, sink)
+        .await
+        .unwrap();
 
     Connection {
-        sender: send_channel_tx,
+        client, 
     }
 }
 
-pub async fn do_something(connection: &Connection) -> Result<(), TritiumError> {
+pub async fn hello_world(connection: &mut Connection) -> Result<(), TritiumError> {
     println!("[tritium-remote] do_something");
-    send(connection, r#"{ "type": "graphql", "request_id": 123 }"#).await?;
-    Ok(())
-}
+    // send(connection, r#"{ "type": "graphql", "request_id": 123 }"#).await?;
 
-async fn send(connection: &Connection, text: &str) -> Result<(), TritiumError> {
-    let m = Message::text(text);
-
-    connection.sender.send(m)?;
+    connection.client.graphql_query().await.unwrap();
 
     Ok(())
 }
+

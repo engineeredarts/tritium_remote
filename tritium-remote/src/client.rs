@@ -12,33 +12,12 @@ use uuid::Uuid;
  
 use async_tungstenite::tungstenite::Message;
 
-use super::protocol::MessageFromGateway;
-
+use super::{
+    protocol::{MessageToGateway, MessageFromGateway},
+    tokio_spawner::TokioSpawner
+};
+ 
 pub struct GatewayGraphQLClientBuilder {}
-
-mod tokio_spawner {
-    pub struct TokioSpawner(tokio::runtime::Handle);
-
-    impl TokioSpawner {
-        pub fn new(handle: tokio::runtime::Handle) -> Self {
-            TokioSpawner(handle)
-        }
-
-        pub fn current() -> Self {
-            TokioSpawner::new(tokio::runtime::Handle::current())
-        }
-    }
-
-    impl futures::task::Spawn for TokioSpawner {
-        fn spawn_obj(
-            &self,
-            obj: futures::task::FutureObj<'static, ()>,
-        ) -> Result<(), futures::task::SpawnError> {
-            self.0.spawn(obj);
-            Ok(())
-        }
-    }
-}
 
 impl GatewayGraphQLClientBuilder {
     pub fn new() -> Self {
@@ -60,7 +39,7 @@ impl GatewayGraphQLClientBuilder {
         let (mut sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-        let runtime = tokio_spawner::TokioSpawner::current();
+        let runtime = TokioSpawner::current();
 
         let sender_handle = runtime.spawn_with_handle(sender_loop(
                 sender_stream,
@@ -94,6 +73,22 @@ impl GatewayGraphQLClientBuilder {
 pub struct GatewayGraphQLClient {
     inner: Arc<ClientInner>,
     sender_sink: mpsc::Sender<Message>
+} 
+
+impl GatewayGraphQLClient {
+    pub async fn graphql_query(&mut self) -> Result<(), Error> {
+        let request_id = 123;
+        let data:serde_json::Value = serde_json::from_str("{}").unwrap();
+        let msg = json_message(MessageToGateway::GraphQL { request_id, data })
+            .map_err(|err| Error::Send(err.to_string()))?;
+        
+        self.sender_sink
+            .send(msg)
+            .await
+            .map_err(|err| Error::Send(err.to_string()))?;
+
+        Ok(())
+    }
 }
 
 struct ClientInner
@@ -217,7 +212,7 @@ async fn sender_loop(
                 return Ok(());
             }
         }
-    }
+    } 
 }
 
 fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
