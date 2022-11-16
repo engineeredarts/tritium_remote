@@ -46,14 +46,12 @@ type GenericResponse = graphql_client::Response<serde_json::Value>;
 type OperationSender = mpsc::Sender<GenericResponse>;
 type OperationMap = Arc<Mutex<HashMap<Uuid, OperationSender>>>;
 
-async fn receiver_loop<S>(
-    mut receiver: S,
+async fn receiver_loop(
+    mut receiver: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
     mut sender: mpsc::Sender<Message>,
     operations: OperationMap,
     shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error>
-where
-    S: Stream<Item = Result<Message, tungstenite::Error>> + Unpin
 {
     while let Some(msg) = receiver.next().await {
         println!("Received message: {:?}", msg);
@@ -101,14 +99,12 @@ pub enum Error {
     SenderShutdown(String),
 }
 
-async fn sender_loop<S>(
+async fn sender_loop(
     message_stream: mpsc::Receiver<Message>,
-    mut ws_sender: S,
+    mut ws_sender: impl Sink<Message, Error=tungstenite::Error> + Unpin,
     operations: OperationMap,
     shutdown: oneshot::Receiver<()>,
 ) -> Result<(), Error>
-where
-    S: Sink<Message, Error=tungstenite::Error> + Unpin
 {
     use futures::{future::FutureExt, select};
 
