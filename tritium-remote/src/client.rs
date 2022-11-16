@@ -1,13 +1,17 @@
 use futures::{
     channel::{mpsc, oneshot},
     future::RemoteHandle,
-    sink::Sink,
-    stream::Stream,
+    sink::{Sink, SinkExt},
+    stream::{Stream, StreamExt},
+    lock::Mutex
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio;
+use uuid::Uuid; 
+ 
+use async_tungstenite::tungstenite::Message;
 
-use super::websockets::WebsocketMessage;
+// use super::websockets::WebsocketMessage;
 
 pub struct GatewayGraphQLClientBuilder {}
 
@@ -18,7 +22,7 @@ impl GatewayGraphQLClientBuilder {
 
     pub async fn build(
         self,
-        mut websocket_stream: impl Stream<Item = Result<tungstenite::Message, tungstenite::Error>>
+        mut websocket_stream: impl Stream<Item = Result<Message, tungstenite::Error>>
             + Unpin
             + Send
             + 'static,
@@ -27,38 +31,36 @@ impl GatewayGraphQLClientBuilder {
             + Send
             + 'static,
     ) -> GatewayGraphQLClient {
-        let (mut sender_sink, _sender_stream) = mpsc::channel(1);
-
+        let (mut sender_sink, _sender_stream) = mpsc::channel::<Message>(1);
+ 
         // start receiving & processing messages
-        tokio::spawn(receiver_loop(websocket_stream, sender_sink));
+        // tokio::spawn(receiver_loop(websocket_stream, sender_sink));
 
         GatewayGraphQLClient {}
-    }
+    } 
 }
 
 pub struct GatewayGraphQLClient {}
 
-// type OperationMap<GenericResponse> = Arc<Mutex<HashMap<Uuid, OperationSender<GenericResponse>>>>;
+type GenericResponse = graphql_client::Response<serde_json::Value>;
+type OperationSender = mpsc::Sender<GenericResponse>;
+type OperationMap = Arc<Mutex<HashMap<Uuid, OperationSender>>>;
 
-async fn receiver_loop<S, WsMessage, GraphqlClient>(
+async fn receiver_loop<S>(
     mut receiver: S,
-    mut sender: mpsc::Sender<WsMessage>,
-    operations: OperationMap<GraphqlClient::Response>,
+    mut sender: mpsc::Sender<Message>,
+    operations: OperationMap,
     shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error>
 where
-    S: Stream<Item = Result<WsMessage, WsMessage::Error>> + Unpin,
-    WsMessage: WebsocketMessage,
-    GraphqlClient: crate::graphql::GraphqlClient,
+    S: Stream<Item = Result<Message, tungstenite::Error>> + Unpin
 {
     while let Some(msg) = receiver.next().await {
-        trace!("Received message: {:?}", msg);
+        println!("Received message: {:?}", msg);
         if let Err(err) =
-            handle_message::<WsMessage, GraphqlClient>(msg, &mut sender, &operations).await
+            handle_message(msg, &mut sender, &operations).await
         {
-            trace!("message handler error, shutting down: {err:?}");
-            #[cfg(feature = "no-logging")]
-            let _ = err;
+            println!("message handler error, shutting down: {err:?}");
             break;
         }
     }
@@ -67,6 +69,11 @@ where
         .send(())
         .map_err(|_| Error::SenderShutdown("Couldn't shutdown sender".to_owned()))
 }
+
+async fn handle_message(msg:Result<Message, tungstenite::Error>, sender: &mut mpsc::Sender<Message>, operations: &OperationMap) -> Result<(), Error> {
+    // TODO
+    Ok(())
+} 
 
 #[derive(thiserror::Error, Debug)]
 /// Error type
@@ -94,16 +101,14 @@ pub enum Error {
     SenderShutdown(String),
 }
 
-async fn sender_loop<M, S, E, GenericResponse>(
-    message_stream: mpsc::Receiver<M>,
+async fn sender_loop<S>(
+    message_stream: mpsc::Receiver<Message>,
     mut ws_sender: S,
-    operations: OperationMap<GenericResponse>,
+    operations: OperationMap,
     shutdown: oneshot::Receiver<()>,
 ) -> Result<(), Error>
 where
-    M: WebsocketMessage,
-    S: Sink<M, Error = E> + Unpin,
-    E: std::error::Error,
+    S: Sink<Message, Error=tungstenite::Error> + Unpin
 {
     use futures::{future::FutureExt, select};
 
@@ -114,7 +119,7 @@ where
         select! {
             msg = message_stream.next() => {
                 if let Some(msg) = msg {
-                    trace!("Sending message: {:?}", msg);
+                    println!("Sending message: {:?}", msg);
                     ws_sender
                         .send(msg)
                         .await
@@ -130,7 +135,7 @@ where
                 while message_stream.next().await.is_some() {}
 
                 // Clear out any operations
-                operations.lock().await.clear();
+                // operations.lock().await.clear();
 
                 return Ok(());
             }
@@ -138,38 +143,45 @@ where
     }
 }
 
-struct ClientInner<GraphqlClient>
-where
-    GraphqlClient: crate::graphql::GraphqlClient,
-{
-    #[allow(dead_code)]
-    receiver_handle: RemoteHandle<Result<(), Error>>,
-    #[allow(dead_code)]
-    sender_handle: RemoteHandle<Result<(), Error>>,
-    operations: OperationMap<GraphqlClient::Response>,
+// struct ClientInner<GraphqlClient>
+// where
+//     GraphqlClient: crate::graphql::GraphqlClient,
+// {
+//     #[allow(dead_code)]
+//     receiver_handle: RemoteHandle<Result<(), Error>>,
+//     #[allow(dead_code)]
+//     sender_handle: RemoteHandle<Result<(), Error>>,
+//     operations: OperationMap<GraphqlClient::Response>,
+// }
+
+struct ClientInner {
 }
 
-fn json_message<M: WebsocketMessage>(payload: impl serde::Serialize) -> Result<M, Error> {
-    Ok(M::new(
+fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
+    Ok(Message::Text(
         serde_json::to_string(&payload).map_err(|err| Error::Decode(err.to_string()))?,
     ))
 }
 
-fn decode_message<T: serde::de::DeserializeOwned, WsMessage: WebsocketMessage>(
-    message: WsMessage,
+fn decode_message<T: serde::de::DeserializeOwned>(
+    message: Message,
 ) -> Result<Option<T>, Error> {
-    if message.is_ping() || message.is_pong() {
-        Ok(None)
-    } else if message.is_close() {
-        Err(Error::Close(
-            message.error_message().unwrap_or(String::new()).to_owned(),
-        ))
-    } else if let Some(s) = message.text() {
-        trace!("Decoding message: {}", s);
-        Ok(Some(
-            serde_json::from_str::<T>(s).map_err(|err| Error::Decode(err.to_string()))?,
-        ))
-    } else {
-        Ok(None)
-    }
+    // TODO
+    Ok(None)
+
+
+    // if message.is_ping() || message.is_pong() {
+    //     Ok(None)
+    // } else if message.is_close() {
+    //     Err(Error::Close(
+    //         message.error_message().unwrap_or(String::new()).to_owned(),
+    //     ))
+    // } else if let Some(s) = message.text() {
+    //     println!("Decoding message: {}", s);
+    //     Ok(Some(
+    //         serde_json::from_str::<T>(s).map_err(|err| Error::Decode(err.to_string()))?,
+    //     ))
+    // } else {
+    //     Ok(None)
+    // }
 }
