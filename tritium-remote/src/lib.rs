@@ -17,11 +17,11 @@ pub struct Connection {
 pub async fn connect(url: &str) -> Connection {
     let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
         .await
-        .expect("Failed to connect");
+        .expect("Failed to connect"); 
 
     let (sink, stream) = ws_stream.split();
 
-    let mut client = GatewayGraphQLClientBuilder::new()
+    let client = GatewayGraphQLClientBuilder::new()
         .build(stream, sink)
         .await
         .unwrap();
@@ -32,10 +32,13 @@ pub async fn connect(url: &str) -> Connection {
 }
 
 pub async fn hello_world(connection: &mut Connection) -> Result<(), TritiumError> {
-    println!("[tritium-remote] do_something");
+    println!("[tritium-remote] hello_world");
     // send(connection, r#"{ "type": "graphql", "request_id": 123 }"#).await?;
 
-    connection.client.graphql_query().await.unwrap();
+    let query = connection.client.graphql_query().await.unwrap();
+
+    let result = query.result.await;
+    println!("result {:?}", result);
 
     Ok(())
 }

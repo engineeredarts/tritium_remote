@@ -1,14 +1,12 @@
 use futures::{
     channel::{mpsc, oneshot},
-    future::RemoteHandle,
+    future::{Future, RemoteHandle},
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
     lock::Mutex,
     task::SpawnExt
 };
-use std::{collections::HashMap, sync::Arc};
-use tokio;
-use uuid::Uuid; 
+use std::{collections::HashMap, sync::Arc, pin::Pin};
  
 use async_tungstenite::tungstenite::Message;
 
@@ -26,17 +24,17 @@ impl GatewayGraphQLClientBuilder {
 
     pub async fn build(
         self,
-        mut websocket_stream: impl Stream<Item = Result<Message, tungstenite::Error>>
+        websocket_stream: impl Stream<Item = Result<Message, tungstenite::Error>>
             + Unpin
             + Send
             + 'static,
-        mut websocket_sink: impl Sink<tungstenite::Message, Error = tungstenite::Error>
+        websocket_sink: impl Sink<tungstenite::Message, Error = tungstenite::Error>
             + Unpin
             + Send
             + 'static,
     ) -> Result<GatewayGraphQLClient, Error> {
         let operations = Arc::new(Mutex::new(HashMap::new()));
-        let (mut sender_sink, sender_stream) = mpsc::channel::<Message>(1);
+        let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
         let runtime = TokioSpawner::current();
@@ -65,20 +63,33 @@ impl GatewayGraphQLClientBuilder {
                 operations,
                 sender_handle,
             }),
-            sender_sink,            
+            sender_sink,
+            next_request_id: 0            
         })
     } 
 }
 
 pub struct GatewayGraphQLClient {
     inner: Arc<ClientInner>,
-    sender_sink: mpsc::Sender<Message>
+    sender_sink: mpsc::Sender<Message>,
+    next_request_id: u64
 } 
 
+pub struct PendingGraphQLRequest {
+    pub id: RequestId,
+    pub result: Pin<Box<dyn Future<Output = Result<GenericResponse, Error>> + Send>>,
+}
+
 impl GatewayGraphQLClient {
-    pub async fn graphql_query(&mut self) -> Result<(), Error> {
-        let request_id = 123;
-        let data:serde_json::Value = serde_json::from_str("{}").unwrap();
+    pub async fn graphql_query(&mut self) -> Result<PendingGraphQLRequest, Error> {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        let (sender, receiver) = mpsc::channel(1);
+        self.inner.operations.lock().await.insert(request_id, sender);
+
+        let data: serde_json::Value = serde_json::from_str("{}").unwrap();
+
         let msg = json_message(MessageToGateway::GraphQL { request_id, data })
             .map_err(|err| Error::Send(err.to_string()))?;
         
@@ -87,20 +98,31 @@ impl GatewayGraphQLClient {
             .await
             .map_err(|err| Error::Send(err.to_string()))?;
 
-        Ok(())
+        let result = Box::pin(async move {
+            let (r, _) = receiver.into_future().await;
+            match r {
+                Some(response) => Ok(response),
+                _ => Err(Error::Unknown("no response".to_string()))
+            }
+        });
+
+        Ok(PendingGraphQLRequest {id:request_id, result})
     }
 }
 
 struct ClientInner
 {
+    #[allow(dead_code)]
     receiver_handle: RemoteHandle<Result<(), Error>>,
+    #[allow(dead_code)]
     sender_handle: RemoteHandle<Result<(), Error>>,
     operations: OperationMap,
 }
 
 type GenericResponse = graphql_client::Response<serde_json::Value>;
 type OperationSender = mpsc::Sender<GenericResponse>;
-type OperationMap = Arc<Mutex<HashMap<Uuid, OperationSender>>>;
+type RequestId = u64;
+type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
 
 async fn receiver_loop(
     mut receiver: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
@@ -124,7 +146,7 @@ async fn receiver_loop(
         .map_err(|_| Error::SenderShutdown("Couldn't shutdown sender".to_owned()))
 }
 
-async fn handle_message(msg:Result<Message, tungstenite::Error>, sender: &mut mpsc::Sender<Message>, operations: &OperationMap) -> Result<(), Error> {
+async fn handle_message(msg:Result<Message, tungstenite::Error>, _sender: &mut mpsc::Sender<Message>, operations: &OperationMap) -> Result<(), Error> {
     let from_gateway = decode_message::<MessageFromGateway<GenericResponse>>(
         msg.map_err(|err| Error::Decode(err.to_string()))?,
     )
@@ -140,6 +162,19 @@ async fn handle_message(msg:Result<Message, tungstenite::Error>, sender: &mut mp
             println!("GraphQL response");
             println!("  request id: {}", request_id);
             println!("  data: {:?}", data);
+
+            let mut sink = operations
+                .lock()
+                .await
+                .get(&request_id)
+                .ok_or_else(|| {
+                    Error::Decode("Received message for unknown request".to_owned())
+                })?
+                .clone();
+
+            sink.send(data)
+                .await
+                .map_err(|err| Error::Send(err.to_string()))?
         }
     }
 
@@ -152,9 +187,9 @@ pub enum Error {
     /// Unknown error
     #[error("unknown: {0}")]
     Unknown(String),
-    /// Custom error
-    #[error("{0}: {1}")]
-    Custom(String, String),
+    // /// Custom error
+    // #[error("{0}: {1}")]
+    // Custom(String, String),
     /// Unexpected close frame
     #[error("got close frame, reason: {0}")]
     Close(String),
@@ -228,7 +263,8 @@ fn decode_message<T: serde::de::DeserializeOwned>(
         Message::Ping(_) => Ok(None),
         Message::Pong(_) => Ok(None),
         Message::Text(s) => {
-            let m = serde_json::from_str::<T>(s.as_ref()).map_err(|err| Error::Decode(err.to_string()))?;
+            let m = serde_json::from_str::<T>(s.as_ref())
+                .map_err(|err| Error::Decode(err.to_string()))?;
             Ok(Some(m))
         },
         Message::Binary(_) => Err(Error::BinaryMessagesNotSupported()),

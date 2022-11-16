@@ -12,7 +12,7 @@ static GRAPHQL_RESPONSE: &str = "graphql_response";
 
 static GRAPHQL_RESPONSE_TEMPLATE: &str = r#"\{
     "type": "graphql_response",
-    "request_id:": {request_id},
+    "request_id": {request_id},
     "data": { data_json } 
 }"#;
 
