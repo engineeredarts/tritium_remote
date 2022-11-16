@@ -11,7 +11,7 @@ use uuid::Uuid;
  
 use async_tungstenite::tungstenite::Message;
 
-// use super::websockets::WebsocketMessage;
+use super::protocol::MessageFromGateway;
 
 pub struct GatewayGraphQLClientBuilder {}
 
@@ -69,7 +69,24 @@ async fn receiver_loop(
 }
 
 async fn handle_message(msg:Result<Message, tungstenite::Error>, sender: &mut mpsc::Sender<Message>, operations: &OperationMap) -> Result<(), Error> {
-    // TODO
+    let from_gateway = decode_message::<MessageFromGateway<GenericResponse>>(
+        msg.map_err(|err| Error::Decode(err.to_string()))?,
+    )
+    .map_err(|err| Error::Decode(err.to_string()))?;
+
+    let from_gateway = match from_gateway {
+        Some(m) => m,
+        None => return Ok(())
+    };
+
+    match from_gateway {
+        MessageFromGateway::GraphQLResponse { request_id, data } => {
+            println!("GraphQL response");
+            println!("  request id: {}", request_id);
+            println!("  data: {:?}", data);
+        }
+    }
+
     Ok(())
 } 
 

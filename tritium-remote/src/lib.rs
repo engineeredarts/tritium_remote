@@ -1,5 +1,5 @@
 mod client;
-// mod websockets;
+mod protocol;
 
 mod error;
 use error::TritiumError;
