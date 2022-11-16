@@ -3,7 +3,8 @@ use futures::{
     future::RemoteHandle,
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
-    lock::Mutex
+    lock::Mutex,
+    task::SpawnExt
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio;
@@ -14,6 +15,30 @@ use async_tungstenite::tungstenite::Message;
 use super::protocol::MessageFromGateway;
 
 pub struct GatewayGraphQLClientBuilder {}
+
+mod tokio_spawner {
+    pub struct TokioSpawner(tokio::runtime::Handle);
+
+    impl TokioSpawner {
+        pub fn new(handle: tokio::runtime::Handle) -> Self {
+            TokioSpawner(handle)
+        }
+
+        pub fn current() -> Self {
+            TokioSpawner::new(tokio::runtime::Handle::current())
+        }
+    }
+
+    impl futures::task::Spawn for TokioSpawner {
+        fn spawn_obj(
+            &self,
+            obj: futures::task::FutureObj<'static, ()>,
+        ) -> Result<(), futures::task::SpawnError> {
+            self.0.spawn(obj);
+            Ok(())
+        }
+    }
+}
 
 impl GatewayGraphQLClientBuilder {
     pub fn new() -> Self {
@@ -30,17 +55,53 @@ impl GatewayGraphQLClientBuilder {
             + Unpin
             + Send
             + 'static,
-    ) -> GatewayGraphQLClient {
-        let (mut sender_sink, _sender_stream) = mpsc::channel::<Message>(1);
- 
-        // start receiving & processing messages
-        // tokio::spawn(receiver_loop(websocket_stream, sender_sink));
+    ) -> Result<GatewayGraphQLClient, Error> {
+        let operations = Arc::new(Mutex::new(HashMap::new()));
+        let (mut sender_sink, sender_stream) = mpsc::channel::<Message>(1);
+        let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-        GatewayGraphQLClient {}
+        let runtime = tokio_spawner::TokioSpawner::current();
+
+        let sender_handle = runtime.spawn_with_handle(sender_loop(
+                sender_stream,
+                websocket_sink,
+                Arc::clone(&operations),
+                shutdown_receiver,
+            ))
+            .map_err(|err| Error::SpawnHandle(err.to_string()))?;
+
+        let receiver_handle = runtime
+            .spawn_with_handle(receiver_loop(
+                websocket_stream,
+                sender_sink.clone(),
+                Arc::clone(&operations),
+                shutdown_sender,
+            ))
+            .map_err(|err| Error::SpawnHandle(err.to_string()))?;
+
+
+        Ok(GatewayGraphQLClient {
+            inner: Arc::new(ClientInner {
+                receiver_handle,
+                operations,
+                sender_handle,
+            }),
+            sender_sink,            
+        })
     } 
 }
 
-pub struct GatewayGraphQLClient {}
+pub struct GatewayGraphQLClient {
+    inner: Arc<ClientInner>,
+    sender_sink: mpsc::Sender<Message>
+}
+
+struct ClientInner
+{
+    receiver_handle: RemoteHandle<Result<(), Error>>,
+    sender_handle: RemoteHandle<Result<(), Error>>,
+    operations: OperationMap,
+}
 
 type GenericResponse = graphql_client::Response<serde_json::Value>;
 type OperationSender = mpsc::Sender<GenericResponse>;
@@ -157,20 +218,6 @@ async fn sender_loop(
             }
         }
     }
-}
-
-// struct ClientInner<GraphqlClient>
-// where
-//     GraphqlClient: crate::graphql::GraphqlClient,
-// {
-//     #[allow(dead_code)]
-//     receiver_handle: RemoteHandle<Result<(), Error>>,
-//     #[allow(dead_code)]
-//     sender_handle: RemoteHandle<Result<(), Error>>,
-//     operations: OperationMap<GraphqlClient::Response>,
-// }
-
-struct ClientInner {
 }
 
 fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
