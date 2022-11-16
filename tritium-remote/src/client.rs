@@ -97,6 +97,9 @@ pub enum Error {
     /// Sender shutdown error
     #[error("sender shutdown error, reason: {0}")]
     SenderShutdown(String),
+    /// Binary messages not supported (yet)
+    #[error("binary messages not yet supported")]
+    BinaryMessagesNotSupported(),
 }
 
 async fn sender_loop(
@@ -160,24 +163,23 @@ fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
 }
 
 fn decode_message<T: serde::de::DeserializeOwned>(
-    message: Message,
+    msg: Message,
 ) -> Result<Option<T>, Error> {
-    // TODO
-    Ok(None)
-
-
-    // if message.is_ping() || message.is_pong() {
-    //     Ok(None)
-    // } else if message.is_close() {
-    //     Err(Error::Close(
-    //         message.error_message().unwrap_or(String::new()).to_owned(),
-    //     ))
-    // } else if let Some(s) = message.text() {
-    //     println!("Decoding message: {}", s);
-    //     Ok(Some(
-    //         serde_json::from_str::<T>(s).map_err(|err| Error::Decode(err.to_string()))?,
-    //     ))
-    // } else {
-    //     Ok(None)
-    // }
+    match msg {
+        Message::Ping(_) => Ok(None),
+        Message::Pong(_) => Ok(None),
+        Message::Text(s) => {
+            let m = serde_json::from_str::<T>(s.as_ref()).map_err(|err| Error::Decode(err.to_string()))?;
+            Ok(Some(m))
+        },
+        Message::Binary(_) => Err(Error::BinaryMessagesNotSupported()),
+        Message::Close(frame) => {
+            let reason = match frame {
+                Some(f) => f.reason.to_string(),
+                None => "(unknown reason)".to_string()
+            };
+            Err(Error::Close(reason))
+        }
+        _ => Ok(None)
+    }
 }
