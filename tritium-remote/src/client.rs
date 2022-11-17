@@ -183,7 +183,7 @@ async fn handle_message(
             let mut sink = operations
                 .lock()
                 .await
-                .get(&request_id)
+                .remove(&request_id) // TODO only remove if no more messages expected
                 .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
                 .clone();
 
