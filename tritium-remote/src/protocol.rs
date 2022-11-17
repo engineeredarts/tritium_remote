@@ -3,6 +3,7 @@
 pub enum MessageToGateway<'a, Operation> {
     #[serde(rename = "graphql")]
     GraphQL {
+        auth_token: &'a str,
         request_id: u64,
         data: &'a Operation,
     },

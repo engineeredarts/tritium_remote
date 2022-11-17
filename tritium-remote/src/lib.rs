@@ -3,6 +3,7 @@ mod client;
 mod protocol;
 mod tokio_spawner;
 
+mod auth;
 mod graphql;
 
 mod error;

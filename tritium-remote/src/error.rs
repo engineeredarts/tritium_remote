@@ -5,11 +5,14 @@ use tokio::sync::mpsc;
 pub enum CommunicationErrorInner {
     Unknown,
     Generic(String),
-} 
+}
 
 /// TritiumError enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
 pub enum TritiumError {
+    #[error("Authentication error: {0:?}")]
+    AuthenticationError(String),
+
     #[error("Communication error: {0:?}")]
     CommunicationError(CommunicationErrorInner),
 

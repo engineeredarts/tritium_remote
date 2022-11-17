@@ -12,6 +12,8 @@ use std::{collections::HashMap, pin::Pin, sync::Arc};
 use async_tungstenite::tungstenite::Message;
 
 use super::{
+    auth::get_tritium_auth_token,
+    error::TritiumError,
     graphql::GenericResponse,
     protocol::{MessageFromGateway, MessageToGateway},
     tokio_spawner::TokioSpawner,
@@ -34,7 +36,9 @@ impl GatewayGraphQLClientBuilder {
             + Unpin
             + Send
             + 'static,
-    ) -> Result<GatewayGraphQLClient, Error> {
+    ) -> Result<GatewayGraphQLClient, TritiumError> {
+        let auth_token = get_tritium_auth_token()?;
+
         let operations = Arc::new(Mutex::new(HashMap::new()));
         let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
@@ -48,7 +52,7 @@ impl GatewayGraphQLClientBuilder {
                 Arc::clone(&operations),
                 shutdown_receiver,
             ))
-            .map_err(|err| Error::SpawnHandle(err.to_string()))?;
+            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
 
         let receiver_handle = runtime
             .spawn_with_handle(receiver_loop(
@@ -57,7 +61,7 @@ impl GatewayGraphQLClientBuilder {
                 Arc::clone(&operations),
                 shutdown_sender,
             ))
-            .map_err(|err| Error::SpawnHandle(err.to_string()))?;
+            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
 
         Ok(GatewayGraphQLClient {
             inner: Arc::new(ClientInner {
@@ -67,6 +71,7 @@ impl GatewayGraphQLClientBuilder {
             }),
             sender_sink,
             next_request_id: 0,
+            auth_token,
         })
     }
 }
@@ -75,6 +80,7 @@ pub struct GatewayGraphQLClient {
     inner: Arc<ClientInner>,
     sender_sink: mpsc::Sender<Message>,
     next_request_id: u64,
+    auth_token: String,
 }
 
 pub struct PendingGraphQLRequest<Operation: GraphQLOperation> {
@@ -101,6 +107,7 @@ impl GatewayGraphQLClient {
             .insert(request_id, sender);
 
         let msg = json_message(MessageToGateway::GraphQL {
+            auth_token: &self.auth_token,
             request_id,
             data: &operation,
         })
@@ -214,9 +221,9 @@ pub enum Error {
     /// Sending error
     #[error("message sending error, reason: {0}")]
     Send(String),
-    /// Futures spawn error
-    #[error("futures spawn error, reason: {0}")]
-    SpawnHandle(String),
+    // /// Futures spawn error
+    // #[error("futures spawn error, reason: {0}")]
+    // SpawnHandle(String),
     /// Sender shutdown error
     #[error("sender shutdown error, reason: {0}")]
     SenderShutdown(String),
