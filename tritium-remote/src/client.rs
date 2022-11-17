@@ -1,20 +1,22 @@
+use crate::graphql::GraphQLOperation;
 use futures::{
     channel::{mpsc, oneshot},
     future::{Future, RemoteHandle},
+    lock::Mutex,
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
-    lock::Mutex,
-    task::SpawnExt
+    task::SpawnExt,
 };
-use std::{collections::HashMap, sync::Arc, pin::Pin};
- 
+use std::{collections::HashMap, pin::Pin, sync::Arc};
+
 use async_tungstenite::tungstenite::Message;
 
 use super::{
-    protocol::{MessageToGateway, MessageFromGateway},
-    tokio_spawner::TokioSpawner
+    graphql::GenericResponse,
+    protocol::{MessageFromGateway, MessageToGateway},
+    tokio_spawner::TokioSpawner,
 };
- 
+
 pub struct GatewayGraphQLClientBuilder {}
 
 impl GatewayGraphQLClientBuilder {
@@ -39,7 +41,8 @@ impl GatewayGraphQLClientBuilder {
 
         let runtime = TokioSpawner::current();
 
-        let sender_handle = runtime.spawn_with_handle(sender_loop(
+        let sender_handle = runtime
+            .spawn_with_handle(sender_loop(
                 sender_stream,
                 websocket_sink,
                 Arc::clone(&operations),
@@ -56,7 +59,6 @@ impl GatewayGraphQLClientBuilder {
             ))
             .map_err(|err| Error::SpawnHandle(err.to_string()))?;
 
-
         Ok(GatewayGraphQLClient {
             inner: Arc::new(ClientInner {
                 receiver_handle,
@@ -64,35 +66,46 @@ impl GatewayGraphQLClientBuilder {
                 sender_handle,
             }),
             sender_sink,
-            next_request_id: 0            
+            next_request_id: 0,
         })
-    } 
+    }
 }
 
 pub struct GatewayGraphQLClient {
     inner: Arc<ClientInner>,
     sender_sink: mpsc::Sender<Message>,
-    next_request_id: u64
-} 
+    next_request_id: u64,
+}
 
-pub struct PendingGraphQLRequest {
+pub struct PendingGraphQLRequest<Operation: GraphQLOperation> {
     pub id: RequestId,
-    pub result: Pin<Box<dyn Future<Output = Result<GenericResponse, Error>> + Send>>,
+    pub result: Pin<Box<dyn Future<Output = Result<Operation::Response, Error>> + Send>>,
 }
 
 impl GatewayGraphQLClient {
-    pub async fn graphql_query(&mut self) -> Result<PendingGraphQLRequest, Error> {
+    pub async fn graphql_query<'a, Operation>(
+        &mut self,
+        operation: Operation,
+    ) -> Result<PendingGraphQLRequest<Operation>, Error>
+    where
+        Operation: GraphQLOperation + Unpin + Send + 'static,
+    {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner.operations.lock().await.insert(request_id, sender);
+        self.inner
+            .operations
+            .lock()
+            .await
+            .insert(request_id, sender);
 
         let data: serde_json::Value = serde_json::from_str("{}").unwrap();
+        // let data =
 
         let msg = json_message(MessageToGateway::GraphQL { request_id, data })
             .map_err(|err| Error::Send(err.to_string()))?;
-        
+
         self.sender_sink
             .send(msg)
             .await
@@ -101,17 +114,21 @@ impl GatewayGraphQLClient {
         let result = Box::pin(async move {
             let (r, _) = receiver.into_future().await;
             match r {
-                Some(response) => Ok(response),
-                _ => Err(Error::Unknown("no response".to_string()))
+                Some(response) => operation
+                    .decode(response)
+                    .map_err(|err| Error::Decode(err.to_string())),
+                _ => Err(Error::Unknown("no response".to_string())),
             }
         });
 
-        Ok(PendingGraphQLRequest {id:request_id, result})
+        Ok(PendingGraphQLRequest {
+            id: request_id,
+            result,
+        })
     }
 }
 
-struct ClientInner
-{
+struct ClientInner {
     #[allow(dead_code)]
     receiver_handle: RemoteHandle<Result<(), Error>>,
     #[allow(dead_code)]
@@ -119,7 +136,6 @@ struct ClientInner
     operations: OperationMap,
 }
 
-type GenericResponse = graphql_client::Response<serde_json::Value>;
 type OperationSender = mpsc::Sender<GenericResponse>;
 type RequestId = u64;
 type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
@@ -129,13 +145,10 @@ async fn receiver_loop(
     mut sender: mpsc::Sender<Message>,
     operations: OperationMap,
     shutdown: oneshot::Sender<()>,
-) -> Result<(), Error>
-{
+) -> Result<(), Error> {
     while let Some(msg) = receiver.next().await {
         println!("Received message: {:?}", msg);
-        if let Err(err) =
-            handle_message(msg, &mut sender, &operations).await
-        {
+        if let Err(err) = handle_message(msg, &mut sender, &operations).await {
             println!("message handler error, shutting down: {err:?}");
             break;
         }
@@ -146,7 +159,11 @@ async fn receiver_loop(
         .map_err(|_| Error::SenderShutdown("Couldn't shutdown sender".to_owned()))
 }
 
-async fn handle_message(msg:Result<Message, tungstenite::Error>, _sender: &mut mpsc::Sender<Message>, operations: &OperationMap) -> Result<(), Error> {
+async fn handle_message(
+    msg: Result<Message, tungstenite::Error>,
+    _sender: &mut mpsc::Sender<Message>,
+    operations: &OperationMap,
+) -> Result<(), Error> {
     let from_gateway = decode_message::<MessageFromGateway<GenericResponse>>(
         msg.map_err(|err| Error::Decode(err.to_string()))?,
     )
@@ -154,7 +171,7 @@ async fn handle_message(msg:Result<Message, tungstenite::Error>, _sender: &mut m
 
     let from_gateway = match from_gateway {
         Some(m) => m,
-        None => return Ok(())
+        None => return Ok(()),
     };
 
     match from_gateway {
@@ -167,9 +184,7 @@ async fn handle_message(msg:Result<Message, tungstenite::Error>, _sender: &mut m
                 .lock()
                 .await
                 .get(&request_id)
-                .ok_or_else(|| {
-                    Error::Decode("Received message for unknown request".to_owned())
-                })?
+                .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
                 .clone();
 
             sink.send(data)
@@ -179,7 +194,7 @@ async fn handle_message(msg:Result<Message, tungstenite::Error>, _sender: &mut m
     }
 
     Ok(())
-} 
+}
 
 #[derive(thiserror::Error, Debug)]
 /// Error type
@@ -212,11 +227,10 @@ pub enum Error {
 
 async fn sender_loop(
     message_stream: mpsc::Receiver<Message>,
-    mut ws_sender: impl Sink<Message, Error=tungstenite::Error> + Unpin,
+    mut ws_sender: impl Sink<Message, Error = tungstenite::Error> + Unpin,
     operations: OperationMap,
     shutdown: oneshot::Receiver<()>,
-) -> Result<(), Error>
-{
+) -> Result<(), Error> {
     use futures::{future::FutureExt, select};
 
     let mut message_stream = message_stream.fuse();
@@ -247,7 +261,7 @@ async fn sender_loop(
                 return Ok(());
             }
         }
-    } 
+    }
 }
 
 fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
@@ -256,9 +270,7 @@ fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
     ))
 }
 
-fn decode_message<T: serde::de::DeserializeOwned>(
-    msg: Message,
-) -> Result<Option<T>, Error> {
+fn decode_message<T: serde::de::DeserializeOwned>(msg: Message) -> Result<Option<T>, Error> {
     match msg {
         Message::Ping(_) => Ok(None),
         Message::Pong(_) => Ok(None),
@@ -266,15 +278,15 @@ fn decode_message<T: serde::de::DeserializeOwned>(
             let m = serde_json::from_str::<T>(s.as_ref())
                 .map_err(|err| Error::Decode(err.to_string()))?;
             Ok(Some(m))
-        },
+        }
         Message::Binary(_) => Err(Error::BinaryMessagesNotSupported()),
         Message::Close(frame) => {
             let reason = match frame {
                 Some(f) => f.reason.to_string(),
-                None => "(unknown reason)".to_string()
+                None => "(unknown reason)".to_string(),
             };
             Err(Error::Close(reason))
         }
-        _ => Ok(None)
+        _ => Ok(None),
     }
 }

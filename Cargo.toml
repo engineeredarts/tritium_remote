@@ -1,2 +1,2 @@
 [workspace]
-members = ["tritium-remote", "mock-tritium-gateway", "py-tritium-remote", "tritium-remote/examples/hello_world"]
+members = ["tritium-remote", "mock-tritium-gateway", "py-tritium-remote", "tritium-remote/examples/system_info"]

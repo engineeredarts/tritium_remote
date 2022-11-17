@@ -1,0 +1,31 @@
+# NB this is a hand-crafted schema created to generate code in this project
+
+# TODO to ensure compatibility use introspection from real Tritium or make
+# Tritium itself schema-first with code generated from .schema files like this one
+
+type SystemInfo {
+    """
+    Human readable name
+    """
+    name: String
+
+    """
+    Unique identifier
+    """
+    serial: String!
+
+    """
+    Tritium version
+    """
+    version: String!
+}
+
+"""
+Queries
+"""
+type Query {
+    """
+    System details
+    """
+    system: SystemInfo!
+}

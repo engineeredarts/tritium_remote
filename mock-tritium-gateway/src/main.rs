@@ -16,6 +16,12 @@ static GRAPHQL_RESPONSE_TEMPLATE: &str = r#"\{
     "data": { data_json } 
 }"#;
 
+static SYSTEM_INFO: &str = r#"{
+    "serial": "mock-tritium-system",
+    "name": "Mock Tritium System",
+    "version": "3"
+}"#;
+
 #[derive(Serialize)]
 struct ResponseContext {
     request_id: u64,
@@ -60,7 +66,7 @@ fn main() {
 
                             let context = ResponseContext {
                                 request_id,
-                                data_json: r#"{ "hello": "Hello World!" }"#.to_string(),
+                                data_json: SYSTEM_INFO.to_string(),
                             };
                             let response = tt.render(GRAPHQL_RESPONSE, &context).unwrap();
                             println!("response: {}", response);
