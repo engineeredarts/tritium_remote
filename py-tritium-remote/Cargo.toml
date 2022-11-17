@@ -9,7 +9,7 @@ name = "py_tritium_remote"
 crate-type = ["cdylib"]
 
 [dependencies]
-async-std = "1.12.0"
+tokio = "*"
 pyo3 = { version = "0.17.1", features = ["extension-module"] }
 pyo3-asyncio = { version = "0.17.0", features = ["attributes", "tokio-runtime"] }
 tritium_remote = { path = "../tritium-remote" }

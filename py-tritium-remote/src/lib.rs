@@ -1,58 +1,57 @@
 use pyo3::prelude::*;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tritium_remote;
 
 #[pyclass]
-pub struct TritiumConnection {
-    pub inner: tritium_remote::Connection
-
-    // #[pyo3(get, set)]
-    // pub foo: i32,
+pub struct Tritium {
+    inner: Arc<Mutex<tritium_remote::Connection>>,
 }
 
-// async fn mock_async_connect(url: &str) -> TritiumConnection {
-//     println!("pretending to connect to {}", url);
-//     async_std::task::sleep(Duration::from_secs(1)).await;
+#[pyclass]
+pub struct TritiumSystemInfo {
+    #[pyo3(get, set)]
+    serial: String,
 
-//     TritiumConnection { foo: 123 }
-// }
+    #[pyo3(get, set)]
+    name: Option<String>,
 
-// #[pyfunction]
-// fn connect(py: Python, url: String) -> PyResult<&PyAny> {
-//     pyo3_asyncio::tokio::future_into_py(py, async move {
-//         let c = mock_async_connect(&url).await;
+    #[pyo3(get, set)]
+    version: String,
+}
 
-//         Ok(c)
-//     })
-// }
+#[pymethods]
+impl Tritium {
+    pub fn query_system_info<'p>(&mut self, py: Python<'p>) -> PyResult<&'p PyAny> {
+        let inner = self.inner.clone();
+        pyo3_asyncio::tokio::future_into_py(py, async move {
+            let mut c = inner.lock().await;
+            let system_info = tritium_remote::query_basic_system_info(&mut c)
+                .await
+                .unwrap();
+
+            Ok(TritiumSystemInfo {
+                serial: system_info.serial,
+                name: system_info.name,
+                version: system_info.version,
+            })
+        })
+    }
+}
 
 #[pyfunction]
 fn connect(py: Python, url: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let connection = tritium_remote::connect(&url).await;
-        Ok(TritiumConnection {
-            inner:connection
+        Ok(Tritium {
+            inner: Arc::new(Mutex::new(connection)),
         })
     })
-}
-
-#[pyfunction]
-fn do_something(py: Python, connection: ???) -> PyResult<&PyAny> {
-    pyo3_asyncio::tokio::future_into_py(py, async move {
-        tritium_remote::do_something(connection.inner).await;
-        Ok(())
-    })
-}
-
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
 }
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn py_tritium_remote(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(connect, m)?)?;
-    m.add_function(wrap_pyfunction!(do_something, m)?)?;
     Ok(())
 }
