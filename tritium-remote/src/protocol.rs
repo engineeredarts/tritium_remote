@@ -1,9 +1,11 @@
-
 #[derive(serde::Serialize, Debug)]
 #[serde(tag = "type")]
-pub enum MessageToGateway<Response> {
+pub enum MessageToGateway<'a, Operation> {
     #[serde(rename = "graphql")]
-    GraphQL { request_id: u64, data: Response },
+    GraphQL {
+        request_id: u64,
+        data: &'a Operation,
+    },
 }
 
 #[derive(serde::Deserialize, Debug)]

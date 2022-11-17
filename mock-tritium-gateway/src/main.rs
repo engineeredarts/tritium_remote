@@ -13,13 +13,17 @@ static GRAPHQL_RESPONSE: &str = "graphql_response";
 static GRAPHQL_RESPONSE_TEMPLATE: &str = r#"\{
     "type": "graphql_response",
     "request_id": {request_id},
-    "data": { data_json } 
+    "data": \{
+        "data": { data_json } 
+    }
 }"#;
 
 static SYSTEM_INFO: &str = r#"{
-    "serial": "mock-tritium-system",
-    "name": "Mock Tritium System",
-    "version": "3"
+    "system": {
+        "serial": "mock-tritium-system",
+        "name": "Mock Tritium System",
+        "version": "3"
+    }
 }"#;
 
 #[derive(Serialize)]

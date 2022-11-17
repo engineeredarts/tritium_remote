@@ -100,11 +100,11 @@ impl GatewayGraphQLClient {
             .await
             .insert(request_id, sender);
 
-        let data: serde_json::Value = serde_json::from_str("{}").unwrap();
-        // let data =
-
-        let msg = json_message(MessageToGateway::GraphQL { request_id, data })
-            .map_err(|err| Error::Send(err.to_string()))?;
+        let msg = json_message(MessageToGateway::GraphQL {
+            request_id,
+            data: &operation,
+        })
+        .map_err(|err| Error::Send(err.to_string()))?;
 
         self.sender_sink
             .send(msg)
