@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Tritium Gateway Messages",
+  "description": "This schema describes the protocol for messages sent via the Tritium gateway",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string"
+    }
+  },
+  "required": ["type"],
+  "oneOf": [{ "$ref": "#gatewayMessages" }, { "$ref": "#multipartMessages" }],
+  "$defs": {
+    "dataname": {
+      "$anchor": "dataname",
+      "title": "A name used to refer to a data item or a stream",
+      "type": "string",
+      "format": "json-pointer"
+    },
+    "id": {
+      "$anchor": "id",
+      "title": "A unique identifier",
+      "type": "number",
+      "minimum": 0
+    },
+    "authtoken": {
+      "$anchor": "authtoken",
+      "title": "A token identifying the user and their permissions",
+      "type": "string"
+    },
+    "error": {
+      "$anchor": "error",
+      "title": "A description of the error that occurred",
+      "type": "string"
+    },
+    "schema": {
+      "$anchor": "schema",
+      "title": "A JSON Schema describing the data",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "dataOrError": {
+      "$anchor": "dataOrError",
+      "title": "Either data or error or neither, but not both",
+      "oneOf": [
+        {
+          "properties": {
+            "error": false,
+            "binary_data": false
+          },
+          "required": ["data"]
+        },
+        {
+          "properties": {
+            "error": false,
+            "binary_data": false,
+            "data": false
+          }
+        },
+        {
+          "properties": {
+            "data": false,
+            "binary_data": false
+          },
+          "required": ["error"]
+        },
+        {
+          "properties": {
+            "data": false,
+            "error": false,
+            "binary_data": {
+              "const": true
+            }
+          },
+          "required": ["binary_data"]
+        }
+      ]
+    },
+    "dataOrBinaryData": {
+      "$anchor": "dataOrBinaryData",
+      "title": "Either data or binary data, but not both",
+      "oneOf": [
+        {
+          "properties": {
+            "binary_data": false
+          },
+          "required": ["data"]
+        },
+        {
+          "properties": {
+            "data": false,
+            "binary_data": {
+              "const": true
+            }
+          },
+          "required": ["binary_data"]
+        }
+      ]
+    },
+    "gatewayMessages": {
+      "$anchor": "gatewayMessages",
+      "title": "Messages of these types access streams or data via the gateway data registry",
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "subscribe_stream",
+              "cancel_subscription",
+              "subscription_successful",
+              "subscription_failed",
+              "cancel_subscription_failed",
+              "subscription_data",
+              "subscription_closed",
+              "graphql",
+              "graphql_response",
+              "graphql_close"
+            ]
+          }
+        }
+      },
+      "then": {
+        "oneOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "subscribe_stream"
+                }
+              }
+            },
+            "then": {
+              "title": "Subscribe to a media stream (client->gateway)",
+              "properties": {
+                "stream": {
+                  "type": "string",
+                  "title": "The name of the media stream to subscribe to"
+                },
+                "id": {
+                  "$ref": "#id"
+                },
+                "auth_token": {
+                  "$ref": "#authtoken"
+                }
+              },
+              "required": ["auth_token", "stream", "id"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "cancel_subscription"
+                }
+              }
+            },
+            "then": {
+              "title": "Cancel subscription to a stream (client->gateway)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                }
+              },
+              "required": ["auth_token", "id"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "subscription_successful"
+                }
+              }
+            },
+            "then": {
+              "title": "Subscription to a stream was successful (gateway->client)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                },
+                "media_stream": {
+                  "type": "string",
+                  "title": "The name of the media stream for this subscription"
+                }
+              },
+              "required": ["id", "media_stream"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "subscription_failed"
+                }
+              }
+            },
+            "then": {
+              "title": "Subscription to a stream failed (gateway->client)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                },
+                "error": {
+                  "$ref": "#error"
+                }
+              },
+              "required": ["id", "error"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "cancel_subscription_failed"
+                }
+              }
+            },
+            "then": {
+              "title": "Cancelling a subscription to a stream failed (gateway->client)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                },
+                "error": {
+                  "$ref": "#error"
+                }
+              },
+              "required": ["id", "error"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "subscription_data"
+                }
+              }
+            },
+            "then": {
+              "title": "Subscription data for a subscribed stream (gateway->client)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                }
+              },
+              "required": ["id"],
+              "$ref": "#dataOrBinaryData"
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "subscription_closed"
+                }
+              }
+            },
+            "then": {
+              "title": "Subscription to a stream has been closed (gateway->client)",
+              "properties": {
+                "id": {
+                  "$ref": "#id"
+                },
+                "error": {
+                  "type": "string"
+                }
+              },
+              "required": ["id"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "graphql"
+                }
+              }
+            },
+            "then": {
+              "title": "Request to process a GraphQL Document (client->gateway)",
+              "properties": {
+                "document": {
+                  "type": "string",
+                  "title": "The GraphQL document to processs"
+                },
+                "request_id": {
+                  "$ref": "#id"
+                },
+                "auth_token": {
+                  "$ref": "#authtoken"
+                },
+                "variable_values": {
+                  "title": "The values of variables to use in the GraphQL document",
+                  "type": "object",
+                  "propertyNames": {
+                    "title": "The variable names must be valid GraphQL names",
+                    "pattern": "^[A-Za-z_][A-Za-z_0-9]*$"
+                  }
+                }
+              },
+              "required": ["document", "request_id", "auth_token"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "graphql_response"
+                }
+              }
+            },
+            "then": {
+              "title": "Response to graphQL (gateway->client)",
+              "properties": {
+                "request_id": {
+                  "$ref": "#id"
+                },
+                "data": {
+                  "title": "The result of the GraphQL document execution",
+                  "type": "object"
+                },
+                "error": {
+                  "type": "string"
+                }
+              },
+              "$ref": "#dataOrError",
+              "required": ["request_id"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "graphql_close"
+                }
+              }
+            },
+            "then": {
+              "title": "Closing an open graphQL request (client->gateway)",
+              "properties": {
+                "request_id": {
+                  "$ref": "#id"
+                }
+              },
+              "required": ["request_id"]
+            },
+            "else": false
+          }
+        ]
+      },
+      "else": false
+    },
+    "multipartMessages": {
+      "$anchor": "multipartMessages",
+      "title": "Messages to handle large sending large messages as a series of fragments",
+      "if": {
+        "properties": {
+          "type": {
+            "enum": ["multipart_fragment", "bad_multipart_fragment"]
+          }
+        }
+      },
+      "then": {
+        "oneOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "multipart_fragment"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "parts": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "part": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "data": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "parts", "part", "data"]
+            },
+            "else": false
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "bad_multipart_fragment"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "part": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "error": {
+                  "type": "string"
+                }
+              },
+              "required": ["type", "id", "part", "error"]
+            },
+            "else": false
+          }
+        ]
+      },
+      "else": false
+    }
+  }
+}

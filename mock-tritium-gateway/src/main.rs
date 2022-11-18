@@ -1,8 +1,13 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::net::TcpListener;
+use std::path::Path;
+use std::sync::Arc;
 use std::thread::spawn;
 use tungstenite::accept;
 use tungstenite::Message;
 
+use jsonschema::JSONSchema;
 use serde::Serialize;
 use serde_json::Value;
 use tinytemplate::{format_unescaped, TinyTemplate};
@@ -36,8 +41,13 @@ fn main() {
     let address = "127.0.0.1:1234";
     println!("mock-tritium-gateway, listening to {}", address);
 
+    let schema_file = File::open(Path::new("gateway_schema.json")).unwrap();
+    let schema_json = serde_json::from_reader(BufReader::new(schema_file)).unwrap();
+    let schema = Arc::new(JSONSchema::compile(&schema_json).expect("A valid schema"));
+
     let server = TcpListener::bind(address).unwrap();
     for stream in server.incoming() {
+        let schema = schema.clone();
         spawn(move || {
             let mut tt = TinyTemplate::new();
             tt.set_default_formatter(&format_unescaped);
@@ -60,6 +70,12 @@ fn main() {
                 if msg.is_text() {
                     let request_json = msg.into_text().unwrap();
                     let request: Value = serde_json::from_str(&request_json).unwrap();
+
+                    // drop if doesnt match the schema
+                    if !schema.is_valid(&request) {
+                        println!("message does not match schema, ignored");
+                        continue;
+                    }
 
                     let request_type = request["type"].as_str().unwrap();
                     println!("  request type: {}", request_type);
