@@ -110,6 +110,7 @@ impl GatewayGraphQLClient {
             auth_token: &self.auth_token,
             request_id,
             document: operation.get_document(),
+            variable_values: operation.get_variables(),
         })
         .map_err(|err| Error::Send(err.to_string()))?;
 

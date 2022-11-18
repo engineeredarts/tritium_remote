@@ -1,4 +1,5 @@
 use graphql_client::{GraphQLQuery, QueryBody, Response};
+use serde_json::json;
 
 pub mod basic_system_info;
 
@@ -17,6 +18,8 @@ pub trait GraphQLOperation {
     fn decode(&self, data: GenericResponse) -> Result<Self::Response, Self::Error>;
 
     fn get_document(&self) -> &str;
+
+    fn get_variables(&self) -> serde_json::Value;
 }
 
 pub struct QueryOperation<Q: GraphQLQuery> {
@@ -50,15 +53,6 @@ impl<Q: GraphQLQuery> QueryOperation<Q> {
     }
 }
 
-// impl<Q: GraphQLQuery> serde::Serialize for QueryOperation<Q> {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         self.inner.serialize(serializer)
-//     }
-// }
-
 impl<Q: GraphQLQuery> GraphQLOperation for QueryOperation<Q> {
     type Response = Response<Q::ResponseData>;
 
@@ -70,5 +64,13 @@ impl<Q: GraphQLQuery> GraphQLOperation for QueryOperation<Q> {
 
     fn get_document(&self) -> &str {
         return self.inner.query;
+    }
+
+    fn get_variables(&self) -> serde_json::Value {
+        let v = serde_json::to_value(&self.inner.variables).unwrap();
+        match v {
+            serde_json::Value::Object(_) => v,
+            _ => json!({}),
+        }
     }
 }

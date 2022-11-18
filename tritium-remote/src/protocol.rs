@@ -6,6 +6,7 @@ pub enum MessageToGateway<'a> {
         auth_token: &'a str,
         request_id: u64,
         document: &'a str,
+        variable_values: serde_json::Value,
     },
 }
 
