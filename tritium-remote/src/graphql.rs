@@ -5,7 +5,7 @@ pub mod basic_system_info;
 pub type GenericResponse = Response<serde_json::Value>;
 
 /// An abstraction over GraphQL operations.
-pub trait GraphQLOperation: serde::Serialize {
+pub trait GraphQLOperation {
     /// The actual response & error type of this operation.
     type Response;
 
@@ -15,6 +15,8 @@ pub trait GraphQLOperation: serde::Serialize {
     /// Decodes a `GenericResponse` into the actual response that will be returned
     /// to users for this operation.
     fn decode(&self, data: GenericResponse) -> Result<Self::Response, Self::Error>;
+
+    fn get_document(&self) -> &str;
 }
 
 pub struct QueryOperation<Q: GraphQLQuery> {
@@ -48,14 +50,14 @@ impl<Q: GraphQLQuery> QueryOperation<Q> {
     }
 }
 
-impl<Q: GraphQLQuery> serde::Serialize for QueryOperation<Q> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.inner.serialize(serializer)
-    }
-}
+// impl<Q: GraphQLQuery> serde::Serialize for QueryOperation<Q> {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         self.inner.serialize(serializer)
+//     }
+// }
 
 impl<Q: GraphQLQuery> GraphQLOperation for QueryOperation<Q> {
     type Response = Response<Q::ResponseData>;
@@ -64,5 +66,9 @@ impl<Q: GraphQLQuery> GraphQLOperation for QueryOperation<Q> {
 
     fn decode(&self, response: GenericResponse) -> Result<Self::Response, Self::Error> {
         self.decode_response(response)
+    }
+
+    fn get_document(&self) -> &str {
+        return self.inner.query;
     }
 }

@@ -1,11 +1,11 @@
 #[derive(serde::Serialize, Debug)]
 #[serde(tag = "type")]
-pub enum MessageToGateway<'a, Operation> {
+pub enum MessageToGateway<'a> {
     #[serde(rename = "graphql")]
     GraphQL {
         auth_token: &'a str,
         request_id: u64,
-        data: &'a Operation,
+        document: &'a str,
     },
 }
 

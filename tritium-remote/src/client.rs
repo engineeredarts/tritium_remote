@@ -109,9 +109,11 @@ impl GatewayGraphQLClient {
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
             request_id,
-            data: &operation,
+            document: operation.get_document(),
         })
         .map_err(|err| Error::Send(err.to_string()))?;
+
+        println!("msg: {}", msg);
 
         self.sender_sink
             .send(msg)
