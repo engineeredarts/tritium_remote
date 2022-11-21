@@ -2,7 +2,6 @@ mod client;
 mod protocol;
 mod tokio_spawner;
 
-mod auth;
 mod graphql;
 
 mod error;
@@ -18,8 +17,10 @@ pub struct Connection {
     client: GatewayGraphQLClient,
 }
 
-pub async fn connect(url: &str) -> Result<Connection, TritiumError> {
-    let client = GatewayGraphQLClientBuilder::new().build(url).await?;
+pub async fn connect(url: &str, auth_token: &str) -> Result<Connection, TritiumError> {
+    let client = GatewayGraphQLClientBuilder::new()
+        .build(url, auth_token)
+        .await?;
     Ok(Connection { client })
 }
 

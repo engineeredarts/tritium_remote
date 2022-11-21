@@ -12,7 +12,6 @@ use std::{collections::HashMap, pin::Pin, sync::Arc};
 use async_tungstenite::tungstenite::Message;
 
 use super::{
-    auth::get_tritium_auth_token,
     error::TritiumError,
     graphql::GenericResponse,
     protocol::{MessageFromGateway, MessageToGateway},
@@ -26,9 +25,11 @@ impl GatewayGraphQLClientBuilder {
         Self {}
     }
 
-    pub async fn build(self, url: &str) -> Result<GatewayGraphQLClient, TritiumError> {
-        let auth_token = get_tritium_auth_token()?;
-
+    pub async fn build(
+        self,
+        url: &str,
+        auth_token: &str,
+    ) -> Result<GatewayGraphQLClient, TritiumError> {
         let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
             .await
             .expect("Failed to connect");
@@ -67,7 +68,7 @@ impl GatewayGraphQLClientBuilder {
             }),
             sender_sink,
             next_request_id: 0,
-            auth_token,
+            auth_token: auth_token.to_string(),
         })
     }
 }
