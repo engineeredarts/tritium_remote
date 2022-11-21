@@ -26,18 +26,14 @@ impl GatewayGraphQLClientBuilder {
         Self {}
     }
 
-    pub async fn build(
-        self,
-        websocket_stream: impl Stream<Item = Result<Message, tungstenite::Error>>
-            + Unpin
-            + Send
-            + 'static,
-        websocket_sink: impl Sink<tungstenite::Message, Error = tungstenite::Error>
-            + Unpin
-            + Send
-            + 'static,
-    ) -> Result<GatewayGraphQLClient, TritiumError> {
+    pub async fn build(self, url: &str) -> Result<GatewayGraphQLClient, TritiumError> {
         let auth_token = get_tritium_auth_token()?;
+
+        let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
+            .await
+            .expect("Failed to connect");
+
+        let (websocket_sink, websocket_stream) = ws_stream.split();
 
         let operations = Arc::new(Mutex::new(HashMap::new()));
         let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
@@ -233,6 +229,12 @@ pub enum Error {
     /// Binary messages not supported (yet)
     #[error("binary messages not yet supported")]
     BinaryMessagesNotSupported(),
+}
+
+impl From<Error> for TritiumError {
+    fn from(err: Error) -> TritiumError {
+        TritiumError::GenericError(err.to_string())
+    }
 }
 
 async fn sender_loop(

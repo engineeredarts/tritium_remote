@@ -1,4 +1,3 @@
-use futures::StreamExt;
 mod client;
 mod protocol;
 mod tokio_spawner;
@@ -8,8 +7,6 @@ mod graphql;
 
 mod error;
 use error::TritiumError;
-
-use async_tungstenite;
 
 use client::{GatewayGraphQLClient, GatewayGraphQLClientBuilder};
 
@@ -21,32 +18,10 @@ pub struct Connection {
     client: GatewayGraphQLClient,
 }
 
-pub async fn connect(url: &str) -> Connection {
-    let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
-        .await
-        .expect("Failed to connect");
-
-    let (sink, stream) = ws_stream.split();
-
-    let client = GatewayGraphQLClientBuilder::new()
-        .build(stream, sink)
-        .await
-        .unwrap();
-
-    Connection { client }
+pub async fn connect(url: &str) -> Result<Connection, TritiumError> {
+    let client = GatewayGraphQLClientBuilder::new().build(url).await?;
+    Ok(Connection { client })
 }
-
-// pub async fn hello_world(connection: &mut Connection) -> Result<(), TritiumError> {
-//     println!("[tritium-remote] hello_world");
-//     // send(connection, r#"{ "type": "graphql", "request_id": 123 }"#).await?;
-
-//     let query = connection.client.graphql_query().await.unwrap();
-
-//     let result = query.result.await;
-//     println!("result {:?}", result);
-
-//     Ok(())
-// }
 
 pub async fn query_basic_system_info(
     connection: &mut Connection,
@@ -54,15 +29,13 @@ pub async fn query_basic_system_info(
     let operation = QueryOperation::<BasicSystemInfo>::new(
         graphql::basic_system_info::basic_system_info::Variables {},
     );
-    let query = connection.client.graphql_query(operation).await.unwrap();
-
-    let response = query
-        .result
-        .await
-        .map_err(|err| TritiumError::GenericError(err.to_string()))?;
+    let query = connection.client.graphql_query(operation).await?;
+    let response = query.result.await?;
 
     match response.data {
         Some(data) => Ok(data.system),
-        _ => Err(TritiumError::GenericError("no data".to_string())),
+        _ => Err(TritiumError::GenericError(
+            "GraphQL response contained no data".to_string(),
+        )),
     }
 }

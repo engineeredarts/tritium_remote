@@ -1,6 +1,8 @@
 #[tokio::main]
 async fn main() {
-    let mut tritium = tritium_remote::connect("ws://localhost:1234").await;
+    let mut tritium = tritium_remote::connect("ws://localhost:1234")
+        .await
+        .unwrap();
 
     let system_info = tritium_remote::query_basic_system_info(&mut tritium)
         .await
