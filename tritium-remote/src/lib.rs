@@ -13,18 +13,18 @@ use graphql::basic_system_info::basic_system_info::BasicSystemInfoSystem;
 use graphql::basic_system_info::BasicSystemInfo;
 use graphql::QueryOperation;
 
-pub struct Connection {
+pub struct Tritium {
     client: GatewayGraphQLClient,
 }
 
-pub async fn connect(url: &str, auth_token: &str) -> Result<Connection, TritiumError> {
+pub async fn connect(url: &str, auth_token: &str) -> Result<Tritium, TritiumError> {
     let client = GatewayGraphQLClientBuilder::new()
         .build(url, auth_token)
         .await?;
-    Ok(Connection { client })
+    Ok(Tritium { client })
 }
 
-impl Connection {
+impl Tritium {
     pub async fn query_basic_system_info(&mut self) -> Result<BasicSystemInfoSystem, TritiumError> {
         let operation = QueryOperation::<BasicSystemInfo>::new(
             graphql::basic_system_info::basic_system_info::Variables {},
