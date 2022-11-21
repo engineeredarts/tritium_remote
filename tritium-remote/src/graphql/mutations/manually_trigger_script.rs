@@ -4,7 +4,7 @@ pub mod manually_trigger_script {
     #![allow(dead_code)]
     use std::result::Result;
     pub const OPERATION_NAME: &str = "ManuallyTriggerScript";
-    pub const QUERY : & str = "mutation ManuallyTriggerScript($input: ManuallyTriggerScriptInput!) {\n    manuallyTriggerScript(input: $input) {\n        script {\n            status\n        }\n    }\n}\n" ;
+    pub const QUERY : & str = "mutation ManuallyTriggerScript($input: ScriptTriggerInput!) {\n    manuallyTriggerScript(input: $input) {\n        script {\n            status\n        }\n    }\n}\n" ;
     use super::*;
     use serde::{Deserialize, Serialize};
     #[allow(dead_code)]
@@ -69,19 +69,19 @@ pub mod manually_trigger_script {
         }
     }
     #[derive(Serialize)]
-    pub struct ManuallyTriggerScriptInput {
-        pub path: String,
+    pub struct ScriptTriggerInput {
         pub action: ScriptTriggerAction,
+        pub path: String,
     }
     #[derive(Serialize)]
     pub struct Variables {
-        pub input: ManuallyTriggerScriptInput,
+        pub input: ScriptTriggerInput,
     }
     impl Variables {}
     #[derive(Deserialize)]
     pub struct ResponseData {
         #[serde(rename = "manuallyTriggerScript")]
-        pub manually_trigger_script: Option<ManuallyTriggerScriptManuallyTriggerScript>,
+        pub manually_trigger_script: ManuallyTriggerScriptManuallyTriggerScript,
     }
     #[derive(Deserialize)]
     pub struct ManuallyTriggerScriptManuallyTriggerScript {

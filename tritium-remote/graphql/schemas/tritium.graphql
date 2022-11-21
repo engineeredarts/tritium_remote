@@ -34,10 +34,10 @@ type Query {
 Mutations
 """
 type Mutation {
-    manuallyTriggerScript(input: ScriptTriggerInput!): ScriptPayload
+    manuallyTriggerScript(input: ScriptTriggerInput!): ScriptPayload!
 }
 
-type ScriptTriggerInput {
+input ScriptTriggerInput {
     action: ScriptTriggerAction!
     path: String!
 }
@@ -67,9 +67,4 @@ enum ScriptStatus {
     ERROR
     LOADED
     RUNNING
-}
-
-input ManuallyTriggerScriptInput {
-    path: String!
-    action: ScriptTriggerAction!
 }
