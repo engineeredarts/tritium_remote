@@ -14,5 +14,9 @@ pub enum MessageToGateway<'a> {
 #[serde(tag = "type")]
 pub enum MessageFromGateway<Response> {
     #[serde(rename = "graphql_response")]
-    GraphQLResponse { request_id: u64, data: Response },
+    GraphQLResponse {
+        request_id: u64,
+        data: Option<Response>,
+        error: Option<String>,
+    },
 }

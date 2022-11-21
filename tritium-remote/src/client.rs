@@ -109,7 +109,7 @@ impl GatewayGraphQLClient {
         })
         .map_err(|err| Error::Send(err.to_string()))?;
 
-        println!("msg: {}", msg);
+        // println!("msg: {}", msg);
 
         self.sender_sink
             .send(msg)
@@ -119,9 +119,10 @@ impl GatewayGraphQLClient {
         let result = Box::pin(async move {
             let (r, _) = receiver.into_future().await;
             match r {
-                Some(response) => operation
+                Some(Ok(response)) => operation
                     .decode(response)
                     .map_err(|err| Error::Decode(err.to_string())),
+                Some(Err(error)) => Err(Error::GatewayError(error)),
                 _ => Err(Error::Unknown("no response".to_string())),
             }
         });
@@ -141,7 +142,8 @@ struct ClientInner {
     operations: OperationMap,
 }
 
-type OperationSender = mpsc::Sender<GenericResponse>;
+type OperationResponse = Result<GenericResponse, String>;
+type OperationSender = mpsc::Sender<OperationResponse>;
 type RequestId = u64;
 type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
 
@@ -180,7 +182,11 @@ async fn handle_message(
     };
 
     match from_gateway {
-        MessageFromGateway::GraphQLResponse { request_id, data } => {
+        MessageFromGateway::GraphQLResponse {
+            request_id,
+            data,
+            error,
+        } => {
             println!("GraphQL response");
             println!("  request id: {}", request_id);
             println!("  data: {:?}", data);
@@ -192,9 +198,15 @@ async fn handle_message(
                 .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
                 .clone();
 
-            sink.send(data)
-                .await
-                .map_err(|err| Error::Send(err.to_string()))?
+            if let Some(d) = data {
+                sink.send(Ok(d))
+                    .await
+                    .map_err(|err| Error::Send(err.to_string()))?
+            } else if let Some(e) = error {
+                sink.send(Err(e))
+                    .await
+                    .map_err(|err| Error::Send(err.to_string()))?
+            }
         }
     }
 
@@ -228,6 +240,9 @@ pub enum Error {
     /// Binary messages not supported (yet)
     #[error("binary messages not yet supported")]
     BinaryMessagesNotSupported(),
+    /// Any error message returned by Gateway
+    #[error("{0}")]
+    GatewayError(String),
 }
 
 impl From<Error> for TritiumError {

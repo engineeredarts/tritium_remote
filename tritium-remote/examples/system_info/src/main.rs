@@ -9,7 +9,10 @@ async fn main() {
         .await
         .expect("failed to connect");
 
-    let system_info = tritium.query_basic_system_info().await.unwrap();
+    let system_info = tritium
+        .query_basic_system_info()
+        .await
+        .expect("query failed");
 
     println!("System info:");
     println!("  serial: {}", system_info.serial);
