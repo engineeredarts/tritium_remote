@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 tokio = "*"
-pyo3 = { version = "0.17.1", features = ["extension-module"] }
+pyo3 = { version = "0.17.1", features = ["extension-module", "multiple-pymethods"] }
 pyo3-asyncio = { version = "0.17.0", features = ["attributes", "tokio-runtime"] }
 tritium_remote = { path = "../tritium-remote" }
 

@@ -3,11 +3,11 @@ mod graphql;
 mod protocol;
 mod tokio_spawner;
 
-pub mod tritium;
-use tritium::Tritium;
+mod tritium;
+pub use tritium::Tritium;
 
-pub mod error;
-use error::TritiumError;
+mod error;
+pub use error::TritiumError;
 
 use client::GatewayGraphQLClientBuilder;
 
