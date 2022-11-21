@@ -1,0 +1,7 @@
+mutation ManuallyTriggerScript($input: ManuallyTriggerScriptInput!) {
+    manuallyTriggerScript(input: $input) {
+        script {
+            status
+        }
+    }
+}

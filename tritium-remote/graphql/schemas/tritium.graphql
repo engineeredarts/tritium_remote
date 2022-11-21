@@ -29,3 +29,47 @@ type Query {
     """
     system: SystemInfo!
 }
+
+"""
+Mutations
+"""
+type Mutation {
+    manuallyTriggerScript(input: ScriptTriggerInput!): ScriptPayload
+}
+
+type ScriptTriggerInput {
+    action: ScriptTriggerAction!
+    path: String!
+}
+
+enum ScriptTriggerAction {
+    START
+    STOP
+}
+
+type ScriptPayload {
+    script: Script
+    commitId: String
+}
+
+type Script {
+    path: String!
+    # source: ScriptSource!
+    # type: ScriptType
+    # debug: ScriptDebug
+    status: ScriptStatus
+    # startConditions: [ScriptStartCondition]
+    # activeReports: [Json!]
+    # enabled: Boolean!
+}
+
+enum ScriptStatus {
+    ERROR
+    LOADED
+    RUNNING
+}
+
+input ManuallyTriggerScriptInput {
+    path: String!
+    action: ScriptTriggerAction!
+}
