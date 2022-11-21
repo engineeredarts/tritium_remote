@@ -1,11 +1,15 @@
+use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tritium_remote;
 
+// mod error;
+// use error::PyTritiumError;
+
 #[pyclass]
 pub struct Tritium {
-    inner: Arc<Mutex<tritium_remote::Connection>>,
+    inner: Arc<Mutex<tritium_remote::Tritium>>,
 }
 
 #[pyclass]
@@ -25,10 +29,11 @@ impl Tritium {
     pub fn query_system_info<'p>(&mut self, py: Python<'p>) -> PyResult<&'p PyAny> {
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            let mut c = inner.lock().await;
-            let system_info = tritium_remote::query_basic_system_info(&mut c)
+            let mut tritium = inner.lock().await;
+            let system_info = tritium
+                .query_basic_system_info()
                 .await
-                .unwrap();
+                .map_err(|err| PyException::new_err(err.to_string()))?;
 
             Ok(TritiumSystemInfo {
                 serial: system_info.serial,
@@ -40,11 +45,13 @@ impl Tritium {
 }
 
 #[pyfunction]
-fn connect(py: Python, url: String) -> PyResult<&PyAny> {
+fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        let connection = tritium_remote::connect(&url).await;
+        let tritium = tritium_remote::connect(&url, &auth_token)
+            .await
+            .map_err(|err| PyException::new_err(err.to_string()))?;
         Ok(Tritium {
-            inner: Arc::new(Mutex::new(connection)),
+            inner: Arc::new(Mutex::new(tritium)),
         })
     })
 }

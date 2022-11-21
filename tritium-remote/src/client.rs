@@ -30,9 +30,7 @@ impl GatewayGraphQLClientBuilder {
         url: &str,
         auth_token: &str,
     ) -> Result<GatewayGraphQLClient, TritiumError> {
-        let (ws_stream, _) = async_tungstenite::tokio::connect_async(url)
-            .await
-            .expect("Failed to connect");
+        let (ws_stream, _) = async_tungstenite::tokio::connect_async(url).await?;
 
         let (websocket_sink, websocket_stream) = ws_stream.split();
 

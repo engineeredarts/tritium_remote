@@ -7,7 +7,7 @@ async fn main() {
 
     let mut tritium = tritium_remote::connect("ws://localhost:1234", &auth_token)
         .await
-        .unwrap();
+        .expect("failed to connect");
 
     let system_info = tritium.query_basic_system_info().await.unwrap();
 

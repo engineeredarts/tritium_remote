@@ -4,7 +4,7 @@ mod tokio_spawner;
 
 mod graphql;
 
-mod error;
+pub mod error;
 use error::TritiumError;
 
 use client::{GatewayGraphQLClient, GatewayGraphQLClientBuilder};
