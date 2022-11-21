@@ -10,11 +10,19 @@ mod tritium;
 
 create_exception!(tritium, TritiumError, pyo3::exceptions::PyException);
 
+/// A remote Tritium system
 #[pyclass]
 pub struct Tritium {
     inner: Arc<Mutex<tritium_remote::Tritium>>,
 }
 
+/// Connects to the given remote Tritium system using an unencrypted WebSocket.
+///
+/// Arguments:
+///   - url: The URL to connect to in the form ws://xxx.xxx.xxx.xxx:1234
+///   - auth_token: JWT authentication token
+/// Returns: Tritium
+/// Raises: TritiumError if unable to connect
 #[pyfunction]
 fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
@@ -31,6 +39,7 @@ fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
 #[pymodule]
 fn py_tritium_remote(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(connect, m)?)?;
+    m.add("Tritium", py.get_type::<Tritium>())?;
     m.add("TritiumError", py.get_type::<TritiumError>())?;
     Ok(())
 }
