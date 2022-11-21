@@ -23,19 +23,19 @@ pub async fn connect(url: &str) -> Result<Connection, TritiumError> {
     Ok(Connection { client })
 }
 
-pub async fn query_basic_system_info(
-    connection: &mut Connection,
-) -> Result<BasicSystemInfoSystem, TritiumError> {
-    let operation = QueryOperation::<BasicSystemInfo>::new(
-        graphql::basic_system_info::basic_system_info::Variables {},
-    );
-    let query = connection.client.graphql_query(operation).await?;
-    let response = query.result.await?;
+impl Connection {
+    pub async fn query_basic_system_info(&mut self) -> Result<BasicSystemInfoSystem, TritiumError> {
+        let operation = QueryOperation::<BasicSystemInfo>::new(
+            graphql::basic_system_info::basic_system_info::Variables {},
+        );
+        let query = self.client.graphql_query(operation).await?;
+        let response = query.result.await?;
 
-    match response.data {
-        Some(data) => Ok(data.system),
-        _ => Err(TritiumError::GenericError(
-            "GraphQL response contained no data".to_string(),
-        )),
+        match response.data {
+            Some(data) => Ok(data.system),
+            _ => Err(TritiumError::GenericError(
+                "GraphQL response contained no data".to_string(),
+            )),
+        }
     }
 }

@@ -4,9 +4,7 @@ async fn main() {
         .await
         .unwrap();
 
-    let system_info = tritium_remote::query_basic_system_info(&mut tritium)
-        .await
-        .unwrap();
+    let system_info = tritium.query_basic_system_info().await.unwrap();
 
     println!("System info:");
     println!("  serial: {}", system_info.serial);
