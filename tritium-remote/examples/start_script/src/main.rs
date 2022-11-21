@@ -9,11 +9,8 @@ async fn main() {
         .await
         .expect("failed to connect");
 
-    let _script = tritium
+    tritium
         .start_script("start_stop.py")
         .await
-        .expect("mutation failed");
-
-    // println!("Script:");
-    // println!("  status: {}", script.status);
+        .expect("trigger script mutation failed");
 }
