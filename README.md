@@ -21,6 +21,23 @@ Implemented in Rust but with bindings to
 -   Start & stop scripts
 -   Send and receive arbitrary messages via bidirectional byte stream
 
+## Running Examples
+
+The Rust and Python examples use the _TRITIUM_AUTH_TOKEN_ environment variable to get the JWT access token they need.
+
+Pending a proper UI for generating tokens, the best way for now is...
+
+1. Log into the Tritium cloud UI
+2. Connect to your locally-running system
+3. Open the browser console -> _Application_ tab -> _Cookies_
+4. Select on _x-tritium-auth_ and copy the contents
+
+```bash
+$ export TRITIUM_AUTH_TOKEN={paste x-tritium-auth contents here}
+$ cd tritium-remote/examples/system_info
+$ cargo run
+```
+
 ## Generated GraphQL Code
 
 Rust structures are generated from the GraphQL schemas using [graphql-client](https://crates.io/crates/graphql_client_cli)
