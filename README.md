@@ -10,6 +10,13 @@ Implemented in Rust but with bindings to
 -   Python
 -   C/C++
 
+_NB_ It is assumed that the Tritium system is being accessed over a LAN without encryption.
+The Gateway node must be launched with the _--insecure-websockets_ option, like so:
+
+```
+ExecStart = /opt/tritium/bin/gateway_node --insecure-websockets
+```
+
 ## APIs
 
 ### Sequence playback
@@ -27,7 +34,7 @@ The Rust and Python examples use the _TRITIUM_AUTH_TOKEN_ environment variable t
 
 Pending a proper UI for generating tokens, the best way for now is...
 
-1. Log into the Tritium cloud UI
+1. Log into the [Tritium cloud UI](https://develop.tritiumrobot-test.cloud/)
 2. Connect to your locally-running system
 3. Open the browser console -> _Application_ tab -> _Cookies_
 4. Select on _x-tritium-auth_ and copy the contents
