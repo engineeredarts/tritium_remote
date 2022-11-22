@@ -4,8 +4,6 @@ use tokio::sync::Mutex;
 use pyo3::create_exception;
 use pyo3::prelude::*;
 
-use tritium_remote;
-
 mod tritium;
 
 create_exception!(tritium, TritiumError, pyo3::exceptions::PyException);
@@ -13,7 +11,7 @@ create_exception!(tritium, TritiumError, pyo3::exceptions::PyException);
 /// A remote Tritium system
 #[pyclass]
 pub struct Tritium {
-    inner: Arc<Mutex<tritium_remote::Tritium>>,
+    inner: Arc<Mutex<::tritium_remote::Tritium>>,
 }
 
 /// Connects to the given remote Tritium system using an unencrypted WebSocket.
@@ -26,7 +24,7 @@ pub struct Tritium {
 #[pyfunction]
 fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        let tritium = tritium_remote::connect(&url, &auth_token)
+        let tritium = ::tritium_remote::connect(&url, &auth_token)
             .await
             .map_err(|err| TritiumError::new_err(err.to_string()))?;
         Ok(Tritium {
@@ -35,9 +33,9 @@ fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
     })
 }
 
-/// A Python module implemented in Rust.
+/// Functions and classes for interacting with a remote Tritium system.
 #[pymodule]
-fn py_tritium_remote(py: Python, m: &PyModule) -> PyResult<()> {
+fn tritium_remote(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(connect, m)?)?;
     m.add("Tritium", py.get_type::<Tritium>())?;
     m.add("TritiumError", py.get_type::<TritiumError>())?;

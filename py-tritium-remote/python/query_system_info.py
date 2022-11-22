@@ -1,13 +1,13 @@
 import os
 import asyncio
-import py_tritium_remote
+import tritium_remote
 
 
 async def main():
     auth_token = os.environ["TRITIUM_AUTH_TOKEN"]
 
     print("connecting...")
-    tritium = await py_tritium_remote.connect("ws://localhost:1234", auth_token)
+    tritium = await tritium_remote.connect("ws://localhost:1234", auth_token)
 
     print("querying system info...")
     system_info = await tritium.query_system_info()
