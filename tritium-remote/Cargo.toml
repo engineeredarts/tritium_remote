@@ -17,3 +17,4 @@ graphql_client = "*"
 serde = "*"
 serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4"] }
+log = "0.4"

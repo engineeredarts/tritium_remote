@@ -1,4 +1,3 @@
-use crate::graphql::GraphQLOperation;
 use futures::{
     channel::{mpsc, oneshot},
     future::{Future, RemoteHandle},
@@ -7,13 +6,14 @@ use futures::{
     stream::{Stream, StreamExt},
     task::SpawnExt,
 };
+use log::{trace, warn};
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 use async_tungstenite::tungstenite::Message;
 
-use super::{
+use crate::{
     error::TritiumError,
-    graphql::GenericResponse,
+    graphql::{GenericResponse, GraphQLOperation},
     protocol::{MessageFromGateway, MessageToGateway},
     tokio_spawner::TokioSpawner,
 };
@@ -109,8 +109,6 @@ impl GatewayGraphQLClient {
         })
         .map_err(|err| Error::Send(err.to_string()))?;
 
-        // println!("msg: {}", msg);
-
         self.sender_sink
             .send(msg)
             .await
@@ -154,9 +152,9 @@ async fn receiver_loop(
     shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error> {
     while let Some(msg) = receiver.next().await {
-        println!("Received message: {:?}", msg);
+        trace!("Received message: {:?}", msg);
         if let Err(err) = handle_message(msg, &mut sender, &operations).await {
-            println!("message handler error, shutting down: {err:?}");
+            warn!("message handler error, shutting down: {err:?}");
             break;
         }
     }
@@ -187,9 +185,9 @@ async fn handle_message(
             data,
             error,
         } => {
-            println!("GraphQL response");
-            println!("  request id: {}", request_id);
-            println!("  data: {:?}", data);
+            trace!("GraphQL response");
+            trace!("  request id: {}", request_id);
+            trace!("  data: {:?}", data);
 
             let mut sink = operations
                 .lock()
@@ -266,7 +264,7 @@ async fn sender_loop(
         select! {
             msg = message_stream.next() => {
                 if let Some(msg) = msg {
-                    println!("Sending message: {:?}", msg);
+                    trace!("Sending message: {:?}", msg);
                     ws_sender
                         .send(msg)
                         .await
