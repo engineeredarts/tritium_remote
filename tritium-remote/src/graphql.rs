@@ -1,8 +1,8 @@
 use graphql_client::{GraphQLQuery, QueryBody, Response};
 use serde_json::json;
 
-pub mod basic_system_info;
 pub mod mutations;
+pub mod queries;
 
 pub type GenericResponse = Response<serde_json::Value>;
 
