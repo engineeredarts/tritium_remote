@@ -3,6 +3,7 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
+    // output *all* log messages, including from underlying transport
     SimpleLogger::new().env().init().unwrap();
 
     let auth_token =

@@ -4,6 +4,10 @@ mod protocol;
 mod tokio_spawner;
 
 mod tritium;
+
+pub use tritium::scripts::{Script, ScriptStatus};
+pub use tritium::sequences::PlayingSequence;
+pub use tritium::system::TritiumSystemInfo;
 pub use tritium::Tritium;
 
 mod error;

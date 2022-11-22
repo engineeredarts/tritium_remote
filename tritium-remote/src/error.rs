@@ -1,7 +1,7 @@
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-/// TritiumError enumerates all possible errors returned by this library.
+/// Something has gone wrong.
 #[derive(Error, Debug)]
 pub enum TritiumError {
     #[error("Communication error: {0}")]

@@ -3,7 +3,12 @@ use crate::graphql::mutations::play_sequence::{play_sequence, PlaySequence};
 use crate::graphql::QueryOperation;
 use crate::tritium::Tritium;
 
+/// Methods relating to playing pre-prepared robot animations.
 impl Tritium {
+    /// Start playing the given animated sequence.
+    ///
+    /// Arguments:
+    /// * `project_path`: The relative path to the animation project in the robot's repository.
     pub async fn play_sequence(
         &mut self,
         project_path: &str,
@@ -29,7 +34,9 @@ impl Tritium {
     }
 }
 
+/// Details of a sequence that has been started
 pub struct PlayingSequence {
+    /// Identifier for this specific execution of the sequence
     #[allow(dead_code)]
     pub id: String,
 }

@@ -7,7 +7,12 @@ use crate::graphql::mutations::manually_trigger_script::{
 use crate::graphql::QueryOperation;
 use crate::tritium::Tritium;
 
+/// Methods relating to running scripts on the robot.
 impl Tritium {
+    /// Starts executing the given script.
+    ///
+    /// Arguments:
+    /// * `script_path`: The relative path of the script within the robot's repository
     pub async fn start_script(&mut self, script_path: &str) -> Result<Script, TritiumError> {
         let input = manually_trigger_script::ScriptTriggerInput {
             action: manually_trigger_script::ScriptTriggerAction::START,
@@ -38,6 +43,10 @@ impl Tritium {
         }
     }
 
+    /// Stops executing the given script, if running.
+    ///
+    /// Arguments:
+    /// * `script_path`: The relative path of the script within the robot's repository
     pub async fn stop_script(&mut self, script_path: &str) -> Result<Script, TritiumError> {
         let input = manually_trigger_script::ScriptTriggerInput {
             action: manually_trigger_script::ScriptTriggerAction::STOP,
@@ -69,15 +78,20 @@ impl Tritium {
     }
 }
 
+/// A user-editable script on the robot.
 pub struct Script {
     // path: Option<String>,
     #[allow(dead_code)]
     pub status: Option<ScriptStatus>,
 }
 
+/// Runtime status of a script.
 pub enum ScriptStatus {
+    /// Script loaded but not running
     LOADED,
+    /// Script running
     RUNNING,
+    /// Script unable to run due to a syntax or other error
     ERROR,
 }
 
