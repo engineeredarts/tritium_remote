@@ -35,6 +35,7 @@ impl Tritium {
 }
 
 /// Details of a sequence that has been started
+#[derive(Debug)]
 pub struct PlayingSequence {
     /// Identifier for this specific execution of the sequence
     #[allow(dead_code)]

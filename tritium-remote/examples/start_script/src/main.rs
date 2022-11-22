@@ -1,5 +1,7 @@
 use std::env;
 
+const SCRIPT_PATH: &str = "start_stop.py";
+
 #[tokio::main]
 async fn main() {
     let auth_token =
@@ -9,8 +11,11 @@ async fn main() {
         .await
         .expect("failed to connect");
 
-    tritium
-        .start_script("start_stop.py")
+    println!("Starting script {}", SCRIPT_PATH);
+    let script = tritium
+        .start_script(SCRIPT_PATH)
         .await
         .expect("trigger script mutation failed");
+
+    println!("OK, start_script returned: {:?}", script);
 }

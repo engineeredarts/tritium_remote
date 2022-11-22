@@ -29,6 +29,7 @@ impl Tritium {
 }
 
 /// Tritium system information.
+#[derive(Debug)]
 pub struct TritiumSystemInfo {
     /// Serial number / identifier
     pub serial: String,

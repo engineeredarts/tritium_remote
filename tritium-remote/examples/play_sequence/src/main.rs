@@ -1,5 +1,7 @@
 use std::env;
 
+const PROJECT_PATH: &str = "test_sequence";
+
 #[tokio::main]
 async fn main() {
     let auth_token =
@@ -9,8 +11,11 @@ async fn main() {
         .await
         .expect("failed to connect");
 
-    tritium
-        .play_sequence("test_sequence")
+    println!("Playing sequence {}", PROJECT_PATH);
+    let playing_sequence = tritium
+        .play_sequence(PROJECT_PATH)
         .await
         .expect("play sequence mutation failed");
+
+    println!("OK, play_sequence returned: {:?}", playing_sequence);
 }

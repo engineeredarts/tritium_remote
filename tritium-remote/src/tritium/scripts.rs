@@ -79,6 +79,7 @@ impl Tritium {
 }
 
 /// A user-editable script on the robot.
+#[derive(Debug)]
 pub struct Script {
     // path: Option<String>,
     #[allow(dead_code)]
@@ -86,6 +87,7 @@ pub struct Script {
 }
 
 /// Runtime status of a script.
+#[derive(Debug)]
 pub enum ScriptStatus {
     /// Script loaded but not running
     LOADED,
