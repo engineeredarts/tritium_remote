@@ -20,6 +20,11 @@ impl Tritium {
         let query = self.client.graphql_query(operation).await?;
         let response = query.result.await?;
 
+        // TODO - generic way to extract data or return errors
+        if let Some(errors) = response.errors {
+            return Err(TritiumError::from(errors));
+        }
+
         match response.data {
             Some(data) => match data.manually_trigger_script.script {
                 Some(script) => Ok(Script::from(script)),
@@ -44,6 +49,11 @@ impl Tritium {
             });
         let query = self.client.graphql_query(operation).await?;
         let response = query.result.await?;
+
+        // TODO - generic way to extract data or return errors
+        if let Some(errors) = response.errors {
+            return Err(TritiumError::from(errors));
+        }
 
         match response.data {
             Some(data) => match data.manually_trigger_script.script {

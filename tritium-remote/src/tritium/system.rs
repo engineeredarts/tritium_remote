@@ -9,6 +9,11 @@ impl Tritium {
         let query = self.client.graphql_query(operation).await?;
         let response = query.result.await?;
 
+        // TODO - generic way to extract data or return errors
+        if let Some(errors) = response.errors {
+            return Err(TritiumError::from(errors));
+        }
+
         match response.data {
             Some(data) => Ok(SystemInfo::from(data.system)),
             _ => Err(TritiumError::GenericError(
