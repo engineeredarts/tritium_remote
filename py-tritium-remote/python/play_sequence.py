@@ -2,7 +2,7 @@ import os
 import asyncio
 import tritium_remote
 
-SCRIPT_PATH = "start_stop.py"
+PROJECT_PATH = "test_sequence.project"
 
 
 async def main():
@@ -11,8 +11,8 @@ async def main():
     print("connecting...")
     tritium = await tritium_remote.connect("ws://localhost:1234", auth_token)
 
-    print(f"starting script {SCRIPT_PATH}...")
-    await tritium.start_script(SCRIPT_PATH)
+    print(f"playing sequence {PROJECT_PATH}...")
+    await tritium.play_sequence(PROJECT_PATH)
     print("done.")
 
 

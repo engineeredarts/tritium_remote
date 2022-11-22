@@ -10,6 +10,7 @@ async def main():
 
     print("connecting...")
     tritium = await tritium_remote.connect("ws://localhost:1234", auth_token)
+
     print(f"stopping script {SCRIPT_PATH}...")
     await tritium.stop_script(SCRIPT_PATH)
     print("done.")

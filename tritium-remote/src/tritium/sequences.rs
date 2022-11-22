@@ -26,7 +26,7 @@ impl Tritium {
 
 pub struct PlayingSequence {
     #[allow(dead_code)]
-    id: String,
+    pub id: String,
 }
 
 impl From<play_sequence::PlaySequencePlaySequence> for PlayingSequence {
