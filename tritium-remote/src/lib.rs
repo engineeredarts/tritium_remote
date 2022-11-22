@@ -15,6 +15,11 @@ pub use error::TritiumError;
 
 use client::GatewayGraphQLClientBuilder;
 
+/// Connects to a Tritium system via an unsecured WebSocket.  
+///
+/// Arguments:
+/// * `url`: The system WebSocket address in the form _ws://localhost:1234_
+/// * `auth_token`: JWT access token string granting access
 pub async fn connect(url: &str, auth_token: &str) -> Result<Tritium, TritiumError> {
     let client = GatewayGraphQLClientBuilder::new()
         .build(url, auth_token)
