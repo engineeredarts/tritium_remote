@@ -9,9 +9,9 @@ pub mod system;
 /// The Tritium object has methods for interacting with the system, such as...
 /// * Querying [system information](Tritium::query_basic_system_info)
 /// * [Starting](Tritium::start_script) and [stopping](Tritium::stop_script) scripts running on the system
-/// * Playing pre-animated [sequences](Tritium::play_sequence))
+/// * Playing pre-animated [sequences](Tritium::play_sequence)
 pub struct Tritium {
-    /// The connection to the remote system
+    /// The connection to the remote system.
     client: GatewayGraphQLClient,
 }
 

@@ -5,7 +5,7 @@ use crate::tritium::Tritium;
 
 /// General system methods.
 impl Tritium {
-    /// Queries and returns basic information about the system
+    /// Queries and returns basic information about the system.
     /// * Serial number / identifier
     /// * Human readable name, if any
     /// * Tritium version
@@ -28,7 +28,7 @@ impl Tritium {
     }
 }
 
-/// Tritium system info
+/// Tritium system information.
 pub struct TritiumSystemInfo {
     /// Serial number / identifier
     pub serial: String,
