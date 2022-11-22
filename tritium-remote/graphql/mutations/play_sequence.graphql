@@ -1,0 +1,5 @@
+mutation PlaySequence($input: PlaySequenceInput!) {
+    playSequence(input: $input) {
+        id
+    }
+}

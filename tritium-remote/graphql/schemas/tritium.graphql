@@ -35,8 +35,12 @@ Mutations
 """
 type Mutation {
     manuallyTriggerScript(input: ScriptTriggerInput!): ScriptPayload!
+    playSequence(input: PlaySequenceInput!): PlaySequencePayload!
 }
 
+"""
+manuallyTriggerScript
+"""
 input ScriptTriggerInput {
     action: ScriptTriggerAction!
     path: String!
@@ -67,4 +71,15 @@ enum ScriptStatus {
     ERROR
     LOADED
     RUNNING
+}
+
+"""
+playSequence
+"""
+input PlaySequenceInput {
+    projectPath: String!
+}
+
+type PlaySequencePayload {
+    id: String!
 }

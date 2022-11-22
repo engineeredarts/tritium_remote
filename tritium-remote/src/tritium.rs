@@ -1,6 +1,7 @@
 use crate::client::GatewayGraphQLClient;
 
 mod scripts;
+mod sequences;
 mod system;
 
 pub struct Tritium {
