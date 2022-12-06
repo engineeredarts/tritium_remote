@@ -4,14 +4,16 @@ stages:
 
 build_and_test_rust:
   stage: check
-  image: rust:1.65-alpine
+  image: rust:1.65-buster-slim
   script:
     - cargo build
     - cargo test
 
 check_rust:
   stage: check
-  image: rust:1.65-alpine
+  image: rust:1.65-buster-slim
+  before_script:
+    - rustup component add rustfmt
   script:
     - cargo fmt --all -- --check
 
