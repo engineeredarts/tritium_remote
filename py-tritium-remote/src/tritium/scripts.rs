@@ -6,7 +6,7 @@ use crate::TritiumError;
 #[pyclass]
 pub struct Script {
     // #[pyo3(get, set)]
-// path: Option<String>,
+    // path: Option<String>,
 }
 
 #[pymethods]
