@@ -6,7 +6,8 @@ build_and_test_rust:
   stage: check
   image: rust:1.65-slim-buster
   before_script:
-    - apt install python3-dev
+    - apt-get update
+    - apt-get install -y python3-dev
   script:
     - cargo build
     - cargo test
