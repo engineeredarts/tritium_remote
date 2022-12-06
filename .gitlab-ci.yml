@@ -1,5 +1,6 @@
 stages:
   - check
+  - docs
   - deploy
 
 variables:
@@ -30,6 +31,19 @@ fmt_rust:
     - rustup component add rustfmt
   script:
     - cargo fmt --all -- --check
+
+docs_rust:
+  stage: docs
+  image: rust:1.65-slim-buster
+  dependencies: []
+  needs: []
+  before_script:
+    - rustup component add rustfmt
+  script:
+    - cargo doc -p tritium_remote
+  artifacts:
+    paths:
+      - target/doc
 
 # deploy-job:      # This job runs in the deploy stage.
 #   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
