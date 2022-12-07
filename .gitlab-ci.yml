@@ -24,7 +24,7 @@ build_and_test:
   script:
     - cargo build
     - cargo test
-    - cd py-trtiium-remote && maturin build
+    - cd py-tritium-remote && maturin build
   artifacts:
     paths:
       - target/wheels
