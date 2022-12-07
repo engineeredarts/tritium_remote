@@ -20,7 +20,7 @@ build_and_test:
   before_script:
     - apt-get update
     - apt-get install -y python3-dev python3-pip
-    - pip install maturin
+    - pip3 install maturin
   script:
     - cargo build
     - cargo test
