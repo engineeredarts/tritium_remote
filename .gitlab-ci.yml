@@ -45,7 +45,7 @@ fmt_py:
     - pip install black
   script:
       # We have to specify files with no extension exactly
-    - black --check
+    - black --check .
 
 docs_rust:
   stage: docs
