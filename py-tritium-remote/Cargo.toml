@@ -8,6 +8,7 @@ edition = "2021"
 name = "tritium_remote"
 crate-type = ["cdylib"]
 test = false
+doc = false
 
 [dependencies]
 tokio = "*"

@@ -40,7 +40,7 @@ docs_rust:
   before_script:
     - rustup component add rustfmt
   script:
-    - cargo doc -p tritium_remote
+    - cargo doc
   artifacts:
     paths:
       - target/doc
