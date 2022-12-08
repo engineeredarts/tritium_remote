@@ -27,11 +27,10 @@ build_and_test:
 build_py:
   stage: check
   image: quay.io/pypa/manylinux2014_x86_64
-  variables:
-    PYO3_PYTHON: python3.7
   before_script:
     - yum install -y cargo
     - python3.11 -m pip install --user maturin
+    - /root/.local/bin/maturin list-python
   script:
     - cd py-tritium-remote && /root/.local/bin/maturin build
   artifacts:
