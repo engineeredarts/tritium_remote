@@ -27,11 +27,13 @@ build_and_test:
 build_py_36:
   stage: check
   image: quay.io/pypa/manylinux2014_x86_64
+  variables:
+    PYO3_PYTHON: python3.6
   before_script:
     - yum install python3-dev python3-pip cargo
     - pip3 install maturin
   script:
-    - cd py-tritium-remote && maturin build --interpreter python3.6
+    - cd py-tritium-remote && maturin build
   artifacts:
     paths:
       - target/wheels
@@ -39,12 +41,14 @@ build_py_36:
 build_py_37:
   stage: check
   image: rust:1.65-slim-buster
+  variables:
+    PYO3_PYTHON: python3.7
   before_script:
     - apt-get update
     - apt-get install -y python3.7-dev python3-pip
     - pip3 install maturin
   script:
-    - cd py-tritium-remote && maturin build --interpreter python3.7
+    - cd py-tritium-remote && maturin build
   artifacts:
     paths:
       - target/wheels
@@ -52,12 +56,14 @@ build_py_37:
 build_py_39:
   stage: check
   image: rust:1.65-slim-bullseye
+  variables:
+    PYO3_PYTHON: python3.9
   before_script:
     - apt-get update
     - apt-get install -y python3.9-dev python3-pip
     - pip3 install maturin
   script:
-    - cd py-tritium-remote && maturin build --interpreter python3.9
+    - cd py-tritium-remote && maturin build
   artifacts:
     paths:
       - target/wheels
