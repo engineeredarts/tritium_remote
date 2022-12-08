@@ -19,7 +19,7 @@ build_and_test:
   image: rust:1.65-slim-bullseye
   before_script:
     - apt-get update
-    - apt-get install -y python3-dev
+    - apt-get install -y python3
   script:
     - cargo build
     - cargo test
