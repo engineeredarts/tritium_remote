@@ -32,7 +32,7 @@ build_py_36:
   before_script:
     - yum install -y python3-pip cargo
     - pip3 install -U pip
-    - python3 -m install maturin
+    - python3 -m pip install maturin
   script:
     - cd py-tritium-remote && maturin build
   artifacts:
