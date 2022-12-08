@@ -29,7 +29,7 @@ build_py_37:
   image: rust:1.65-slim-buster
   before_script:
     - apt-get update
-    - apt-get install -y python3.7-dev python3.7-pip
+    - apt-get install -y python3.7-dev python3-pip
     - pip3 install maturin
   script:
     - cargo build
@@ -44,8 +44,8 @@ build_py_39:
   image: rust:1.65-slim-bullseye
   before_script:
     - apt-get update
-    - apt-get install -y python3.9-dev python3.9-pip
-    - pip3.9 install maturin
+    - apt-get install -y python3.9-dev python3-pip
+    - pip3 install maturin
   script:
     - cargo build
     - cargo test
