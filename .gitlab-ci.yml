@@ -19,7 +19,7 @@ build_and_test:
   image: rust:1.65-slim-bullseye
   before_script:
     - apt-get update
-    - apt-get install -y python3
+    - apt-get install -y python3-dev
   script:
     - cargo build
     - cargo test
@@ -32,7 +32,7 @@ build_py:
     # this docker image has several python versions as python3.7 etc already
     # maturin picks them up, but errors if python3 (3.6) isn't available
     # to add insult to injury PyO3/maturin doesn't even support 3.6 :shrug:
-    - yum install -y cargo python3-dev
+    - yum install -y cargo python3
     - python3.11 -m pip install --user maturin
     - /root/.local/bin/maturin list-python
   script:
