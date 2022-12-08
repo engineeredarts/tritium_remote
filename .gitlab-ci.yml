@@ -24,17 +24,16 @@ build_and_test:
     - cargo build
     - cargo test
 
-build_py_36_37:
+build_py_37:
   stage: check
   image: rust:1.65-slim-buster
   before_script:
     - apt-get update
-    - apt-get install -y python3.6-dev python3.6-pip python3.7-dev python3.7-pip
-    - pip3.7 install maturin
+    - apt-get install -y python3.7-dev python3.7-pip
+    - pip3 install maturin
   script:
     - cargo build
     - cargo test
-    - cd py-tritium-remote && maturin --interpreter python3.6 build
     - cd py-tritium-remote && maturin --interpreter python3.7 build
   artifacts:
     paths:
@@ -42,7 +41,7 @@ build_py_36_37:
 
 build_py_39:
   stage: check
-  image: rust:1.65-slim-buster
+  image: rust:1.65-slim-bullseye
   before_script:
     - apt-get update
     - apt-get install -y python3.9-dev python3.9-pip
