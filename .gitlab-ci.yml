@@ -27,12 +27,9 @@ build_and_test:
 build_py:
   stage: check
   image: quay.io/pypa/manylinux2014_x86_64
-  variables:
-    PYO3_PYTHON: python3.6
   before_script:
-    - yum install -y python3-pip cargo
-    - pip3 install -U pip
-    - python3 -m pip install maturin
+    - yum install -y cargo
+    - python3.11 -m pip install maturin
   script:
     - cd py-tritium-remote && maturin build
   artifacts:
@@ -61,13 +58,26 @@ docs_rust:
   image: rust:1.65-slim-buster
   dependencies: []
   needs: []
-  before_script:
-    - rustup component add rustfmt
   script:
     - cargo doc
   artifacts:
     paths:
       - target/doc
+
+docs_python:
+  stage: docs
+  image: quay.io/pypa/manylinux2014_x86_64
+  dependencies: [build_py]
+  before_script:
+    - yum install -y python3-pip
+    - pip3 install -U pip
+    - python3.11 -m pip pydoc
+    - python3.11 -m pip target/wheels/*-cp311-*.whl
+  script:
+    - python3.11 -m pdoc tritium_remote -o doc
+  artifacts:
+    paths:
+      - doc
 
 # deploy-job:      # This job runs in the deploy stage.
 #   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
