@@ -34,11 +34,16 @@ build_py:
     # this docker image has several python versions as python3.7 etc already
     # maturin picks them up, but errors if python3 (3.6) isn't available
     # to add insult to injury PyO3/maturin doesn't even support 3.6 :shrug:
-    - yum install -y cargo python3
+    - yum install -y cargo
     - python3.11 -m pip install --user maturin
     - /root/.local/bin/maturin list-python
   script:
-    - cd py-tritium-remote && /root/.local/bin/maturin build
+    - cd py-tritium-remote
+    - /root/.local/bin/maturin build --interpreter python3.7
+    - /root/.local/bin/maturin build --interpreter python3.8
+    - /root/.local/bin/maturin build --interpreter python3.9
+    - /root/.local/bin/maturin build --interpreter python3.10
+    - /root/.local/bin/maturin build --interpreter python3.11
   artifacts:
     paths:
       - target/wheels
