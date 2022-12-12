@@ -27,6 +27,8 @@ build_and_test:
 build_py:
   stage: check
   image: quay.io/pypa/manylinux2014_x86_64
+  variables:
+    PYO3_CROSS_PYTHON_VERSION: python3.7
   before_script:
     # I don't know why, but maturin wants "python3" to be available
     # this docker image has several python versions as python3.7 etc already
