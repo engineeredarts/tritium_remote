@@ -79,9 +79,7 @@ docs_python:
   image: quay.io/pypa/manylinux2014_x86_64
   dependencies: [build_py]
   before_script:
-    - yum install -y python3-pip
-    - pip3 install -U pip
-    - python3.11 -m pip install pydoc
+    - python3.11 -m pip install pdoc
     - python3.11 -m pip target/wheels/*-cp311-*.whl
   script:
     - python3.11 -m pdoc tritium_remote -o doc
