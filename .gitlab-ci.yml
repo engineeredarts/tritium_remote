@@ -14,15 +14,37 @@ cache:
   - cargo/
   - target/
 
-build_and_test_rust:
+build_and_test:
   stage: check
-  image: rust:1.65-slim-buster
+  image: rust:1.65-slim-bullseye
   before_script:
     - apt-get update
     - apt-get install -y python3-dev
   script:
     - cargo build
     - cargo test
+
+build_py:
+  stage: check
+  image: quay.io/pypa/manylinux2014_x86_64
+  before_script:
+    # I don't know why, but maturin wants "python3" to be available
+    # this docker image has several python versions as python3.7 etc already
+    # maturin picks them up, but errors if python3 (3.6) isn't available
+    # to add insult to injury PyO3/maturin doesn't even support 3.6 :shrug:
+    - yum install -y cargo
+    - python3.11 -m pip install --user maturin
+    - /root/.local/bin/maturin list-python
+  script:
+    - cd py-tritium-remote
+    - /root/.local/bin/maturin build --interpreter python3.7
+    - /root/.local/bin/maturin build --interpreter python3.8
+    - /root/.local/bin/maturin build --interpreter python3.9
+    - /root/.local/bin/maturin build --interpreter python3.10
+    - /root/.local/bin/maturin build --interpreter python3.11
+  artifacts:
+    paths:
+      - target/wheels
 
 fmt_rust:
   stage: check
@@ -32,18 +54,38 @@ fmt_rust:
   script:
     - cargo fmt --all -- --check
 
+fmt_py:
+  stage: check
+  image: python:3.11.0-alpine3.15
+  before_script:
+    - pip install black
+  script:
+      # We have to specify files with no extension exactly
+    - black --check .
+
 docs_rust:
   stage: docs
   image: rust:1.65-slim-buster
   dependencies: []
   needs: []
-  before_script:
-    - rustup component add rustfmt
   script:
     - cargo doc
   artifacts:
     paths:
       - target/doc
+
+docs_python:
+  stage: docs
+  image: quay.io/pypa/manylinux2014_x86_64
+  dependencies: [build_py]
+  before_script:
+    - python3.11 -m pip install pdoc
+    - python3.11 -m pip install target/wheels/*-cp311-*.whl
+  script:
+    - python3.11 -m pdoc tritium_remote -o doc
+  artifacts:
+    paths:
+      - doc
 
 # deploy-job:      # This job runs in the deploy stage.
 #   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
