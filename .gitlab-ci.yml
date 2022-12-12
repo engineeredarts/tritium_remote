@@ -81,7 +81,7 @@ docs_python:
   before_script:
     - yum install -y python3-pip
     - pip3 install -U pip
-    - python3.11 -m pip pydoc
+    - python3.11 -m pip install pydoc
     - python3.11 -m pip target/wheels/*-cp311-*.whl
   script:
     - python3.11 -m pdoc tritium_remote -o doc
