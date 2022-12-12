@@ -80,7 +80,7 @@ docs_python:
   dependencies: [build_py]
   before_script:
     - python3.11 -m pip install pdoc
-    - python3.11 -m pip target/wheels/*-cp311-*.whl
+    - python3.11 -m pip install target/wheels/*-cp311-*.whl
   script:
     - python3.11 -m pdoc tritium_remote -o doc
   artifacts:
