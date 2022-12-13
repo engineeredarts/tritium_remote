@@ -111,3 +111,26 @@ publish_python:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
 
+publish_python_docs:
+  stage: publish
+  image: quay.io/pypa/manylinux2014_x86_64
+  needs: [docs_python, publish_python]
+  dependencies: [docs_python]
+  variables:
+    TWINE_USERNAME: __token__
+  before_script:
+    - yum install -y jq
+    - python3.11 -m pip install --user yq
+    - git config --global user.email noreply@engineeredarts.co.uk
+    - git config --global user.name "gitlab-ci"
+  script:
+    - VERSION=$(/root/.local/bin/tomlq -r .package.version Cargo.toml)
+    - git clone https://${CI_SERVER_HOST}/tritium/docs docs_repo
+    - mkdir -p docs_repo/generated/python/tritium_remote/${VERSION}
+    - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
+    - git -C docs_repo add -A
+    - git -C docs_repo commit -m "Gitlab CI auto-generated documentation"
+    - git push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/docs.git
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - when: never
