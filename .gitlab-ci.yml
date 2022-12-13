@@ -114,7 +114,7 @@ publish_python:
 publish_python_docs:
   stage: publish
   image: quay.io/pypa/manylinux2014_x86_64
-  needs: [docs_python, publish_python]
+  # needs: [docs_python, publish_python]
   dependencies: [docs_python]
   variables:
     TWINE_USERNAME: __token__
@@ -124,7 +124,7 @@ publish_python_docs:
     - git config --global user.email noreply@engineeredarts.co.uk
     - git config --global user.name "gitlab-ci"
   script:
-    - VERSION=$(/root/.local/bin/tomlq -r .package.version Cargo.toml)
+    - VERSION=$(/root/.local/bin/tomlq -r .package.version py-tritium-remote/Cargo.toml)
     - git clone https://${CI_SERVER_HOST}/tritium/docs docs_repo
     - mkdir -p docs_repo/generated/python/tritium_remote/${VERSION}
     - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
