@@ -130,7 +130,7 @@ publish_python_docs:
     - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
     - git -C docs_repo add -A
     - git -C docs_repo commit -m "Gitlab CI auto-generated documentation"
-    - git push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/docs.git
+    - git -C docs_repo push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/docs.git
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
