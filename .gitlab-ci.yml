@@ -87,8 +87,8 @@ docs_python:
     paths:
       - doc
 
-publish:
-  stage: deploy
+publish_rust:
+  stage: publish
   image: rust:1.65-slim-bullseye
   script:
     - cd tritium_remote
@@ -96,3 +96,16 @@ publish:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
+
+publish_python:
+  stage: publish
+  image: quay.io/pypa/manylinux2014_x86_64
+  dependencies: [build_py]
+  before_script:
+    - python3.11 -m pip install --user twine
+  script:
+    - python3.11 -m twine upload -r testpypi target/wheels/*-cp311-*.whl
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "main"'
+    - when: never
+
