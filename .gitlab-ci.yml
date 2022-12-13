@@ -106,7 +106,8 @@ publish_python:
   before_script:
     - python3.11 -m pip install --user twine
   script:
-    - python3.11 -m twine upload -r testpypi target/wheels/*-cp311-*.whl
+    # - python3.11 -m twine upload -r testpypi target/wheels/*-cp311-*.whl
+    - python3.11 -m twine upload target/wheels/*-cp311-*.whl
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
@@ -114,7 +115,7 @@ publish_python:
 publish_python_docs:
   stage: publish
   image: quay.io/pypa/manylinux2014_x86_64
-  # needs: [docs_python, publish_python]
+  needs: [docs_python, publish_python]
   dependencies: [docs_python]
   variables:
     TWINE_USERNAME: __token__
