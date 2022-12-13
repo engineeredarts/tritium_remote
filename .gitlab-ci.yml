@@ -102,7 +102,7 @@ publish_python:
   image: quay.io/pypa/manylinux2014_x86_64
   dependencies: [build_py]
   variables:
-    TWINE_USERNAME: _token_
+    TWINE_USERNAME: __token__
   before_script:
     - python3.11 -m pip install --user twine
   script:
