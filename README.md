@@ -17,6 +17,8 @@ The Gateway node must be launched with the _--insecure-websockets_ option, like 
 ExecStart = /opt/tritium/bin/gateway_node --insecure-websockets
 ```
 
+[Hosted docs are here](https://tritiumrobot.cloud/docs/) (require login).
+
 ## APIs
 
 ### Sequence playback
@@ -34,10 +36,11 @@ The Rust and Python examples use the _TRITIUM_AUTH_TOKEN_ environment variable t
 
 Pending a proper UI for generating tokens, the best way for now is...
 
-1. Log into the [Tritium cloud UI](https://develop.tritiumrobot-test.cloud/)
+1. Log into the [Tritium cloud UI](https://tritiumrobot.cloud/)
 2. Connect to your locally-running system
-3. Open the browser console -> _Application_ tab -> _Cookies_
-4. Select on _x-tritium-auth_ and copy the contents
+3. Go to the "Scripts" page
+4. Select the API Keys tab
+5. Click "CREATE AN API KEY"
 
 ```bash
 $ export TRITIUM_AUTH_TOKEN={paste x-tritium-auth contents here}
