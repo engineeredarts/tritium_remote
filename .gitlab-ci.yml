@@ -16,7 +16,7 @@ cache:
 
 build_and_test:
   stage: check
-  image: rust:1.65-slim-bullseye
+  image: rust:1.71-slim-bullseye
   before_script:
     - apt-get update
     - apt-get install -y python3-dev
@@ -48,7 +48,7 @@ build_py:
 
 fmt_rust:
   stage: check
-  image: rust:1.65-slim-buster
+  image: rust:1.71-slim-buster
   before_script:
     - rustup component add rustfmt
   script:
@@ -65,7 +65,7 @@ fmt_py:
 
 docs_rust:
   stage: docs
-  image: rust:1.65-slim-buster
+  image: rust:1.71-slim-buster
   dependencies: []
   needs: []
   script:
@@ -89,7 +89,7 @@ docs_python:
 
 publish_rust:
   stage: publish
-  image: rust:1.65-slim-bullseye
+  image: rust:1.71-slim-bullseye
   script:
     - cd tritium-remote
     - cargo publish
