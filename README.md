@@ -8,16 +8,12 @@ A library for interacting with Tritium systems.
 Implemented in Rust but with bindings to
 
 -   Python
--   C/C++
 
-_NB_ It is assumed that the Tritium system is being accessed over a LAN without encryption.
-The Gateway node must be launched with the _--insecure-websockets_ option, like so:
+_NB_ This library is currently only published and tested on linux. However the rust crate ought to work on other platforms.
 
-```
-ExecStart = /opt/tritium/bin/gateway_node --insecure-websockets
-```
+_NB_ **This is only to be used on a trusted local network.** The Tritium system will be accessed over LAN without encryption.
 
-[Hosted docs are here](https://tritiumrobot.cloud/docs/) (require login).
+[Hosted docs are here](https://tritiumrobot.cloud/docs/remote/) (require login).
 
 ## APIs
 
