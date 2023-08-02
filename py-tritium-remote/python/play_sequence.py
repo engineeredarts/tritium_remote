@@ -2,7 +2,8 @@ import os
 import asyncio
 import tritium_remote
 
-PROJECT_PATH = "test_sequence.project"
+# full path to the sequence on the robot
+PROJECT_PATH = "/var/opt/tritium/content/test_sequence.project"
 
 
 async def main():
