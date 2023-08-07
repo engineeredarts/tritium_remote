@@ -9,8 +9,8 @@ use futures::{
 use log::{trace, warn};
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 
-use async_tungstenite::tungstenite::Message;
 use async_tungstenite::tungstenite::client::IntoClientRequest;
+use async_tungstenite::tungstenite::Message;
 
 use crate::{
     error::TritiumError,
@@ -32,7 +32,9 @@ impl GatewayGraphQLClientBuilder {
         auth_token: &str,
     ) -> Result<GatewayGraphQLClient, TritiumError> {
         // GET request with websocket headers
-        let mut request = url.into_client_request().map_err(|err| TritiumError::GenericError(err.to_string()))?;
+        let mut request = url
+            .into_client_request()
+            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
 
         // add auth token header
         let headers = request.headers_mut();
