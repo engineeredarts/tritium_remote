@@ -1,21 +1,17 @@
 # tritium_remote
 
-A library for interacting with Tritium systems.
+A library for interacting with Tritium systems. [Hosted docs are here](https://tritiumrobot.cloud/docs/remote/) (require login).
 
 -   Connects to a running Tritium system via the Gateway node, initially by WebSocket only
 -   Uses GraphQL to send commands and request data
 
-Implemented in Rust but with bindings for use in Python
+Implemented in Rust but with bindings to
 
-_NB_ It is assumed that the Tritium system is being accessed over a LAN without encryption.
-The Gateway node must be launched with the _--insecure-websockets_ option, like so:
+-   Python
 
-```
-ExecStart = /opt/tritium/bin/gateway_node --insecure-websockets
-```
+This library is currently only published and tested on linux. However the rust crate ought to work on other platforms.
 
-[Hosted docs (including python docs) are here](https://tritiumrobot.cloud/docs/) (requires login).
-[Rust API docs are here](https://docs.rs/tritium_remote/)
+**This is only to be used on a trusted local network.** The Tritium system will be accessed over LAN without encryption.
 
 ## APIs
 
