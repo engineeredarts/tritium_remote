@@ -84,11 +84,11 @@ impl Tritium {
     pub async fn post_message(
         &mut self,
         channel: &str,
-        message: Value,
+        message: impl Into<Value>,
     ) -> Result<(), TritiumError> {
         let input = post_message::PostMessageInput {
             channel: channel.to_string(),
-            message,
+            message: message.into(),
         };
         let operation = QueryOperation::<PostMessage>::new(post_message::Variables { input });
         let query = self.client.graphql_query(operation).await?;

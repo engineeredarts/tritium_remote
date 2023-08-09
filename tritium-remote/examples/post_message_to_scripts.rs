@@ -1,4 +1,3 @@
-use serde_json::json;
 // use simple_logger::SimpleLogger;
 use std::env;
 use std::time::SystemTime;
@@ -21,7 +20,7 @@ async fn main() {
         let message = format!("The remote time is now {t}s since the start of 1970");
         println!("posting to channel \"talking_clock\": {message}");
         tritium
-            .post_message("talking_clock", json!(message))
+            .post_message("talking_clock", message)
             .await
             .expect("post failed");
 
