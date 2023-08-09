@@ -1,9 +1,12 @@
+use serde_json::Value;
+
 use crate::error::TritiumError;
 use crate::graphql::mutations::manually_trigger_script::{
     manually_trigger_script,
     manually_trigger_script::ManuallyTriggerScriptManuallyTriggerScriptScript,
     ManuallyTriggerScript,
 };
+use crate::graphql::mutations::post_message::{post_message, PostMessage};
 use crate::graphql::QueryOperation;
 use crate::tritium::Tritium;
 
@@ -75,6 +78,28 @@ impl Tritium {
                 "GraphQL response contained no data".to_string(),
             )),
         }
+    }
+
+    /// Posts a message to all scripts listening on a named channnel.
+    pub async fn post_message(
+        &mut self,
+        channel: &str,
+        message: impl Into<Value>,
+    ) -> Result<(), TritiumError> {
+        let input = post_message::PostMessageInput {
+            channel: channel.to_string(),
+            message: message.into(),
+        };
+        let operation = QueryOperation::<PostMessage>::new(post_message::Variables { input });
+        let query = self.client.graphql_query(operation).await?;
+        let response = query.result.await?;
+
+        // TODO - generic way to extract data or return errors
+        if let Some(errors) = response.errors {
+            return Err(TritiumError::from(errors));
+        }
+
+        Ok(())
     }
 }
 

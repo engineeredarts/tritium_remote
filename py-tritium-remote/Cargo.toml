@@ -17,6 +17,7 @@ tokio = "*"
 pyo3 = { version = "0.17.1", features = ["extension-module", "multiple-pymethods"] }
 pyo3-asyncio = { version = "0.17.0", features = ["attributes", "tokio-runtime"] }
 tritium_remote = { path = "../tritium-remote" }
+serde_json = "1.0"
 
 [package.metadata.maturin]
 python-source = "python"
