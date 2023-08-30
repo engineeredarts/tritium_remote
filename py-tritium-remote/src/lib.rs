@@ -22,9 +22,14 @@ pub struct Tritium {
 /// Returns: Tritium
 /// Raises: TritiumError if unable to connect
 #[pyfunction]
-fn connect(py: Python, url: String, auth_token: String) -> PyResult<&PyAny> {
+fn connect(
+    py: Python,
+    url: String,
+    auth_token: String,
+    description: Option<String>,
+) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
-        let tritium = ::tritium_remote::connect(&url, &auth_token)
+        let tritium = ::tritium_remote::connect(&url, &auth_token, description)
             .await
             .map_err(|err| TritiumError::new_err(err.to_string()))?;
         Ok(Tritium {

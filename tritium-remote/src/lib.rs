@@ -20,9 +20,13 @@ use client::GatewayGraphQLClientBuilder;
 /// Arguments:
 /// * `url`: The system WebSocket address in the form _ws://localhost:1234_
 /// * `auth_token`: JWT access token string granting access
-pub async fn connect(url: &str, auth_token: &str) -> Result<Tritium, TritiumError> {
+pub async fn connect(
+    url: &str,
+    auth_token: &str,
+    description: Option<String>,
+) -> Result<Tritium, TritiumError> {
     let client = GatewayGraphQLClientBuilder::new()
-        .build(url, auth_token)
+        .build(url, auth_token, description)
         .await?;
     Ok(Tritium::new(client))
 }
