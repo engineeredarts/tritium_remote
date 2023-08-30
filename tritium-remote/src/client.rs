@@ -17,6 +17,7 @@ use crate::{
     graphql::{GenericResponse, GraphQLOperation},
     protocol::{MessageFromGateway, MessageToGateway},
     tokio_spawner::TokioSpawner,
+    tritium,
 };
 
 pub struct GatewayGraphQLClientBuilder {}
@@ -30,15 +31,25 @@ impl GatewayGraphQLClientBuilder {
         self,
         url: &str,
         auth_token: &str,
+        description: Option<String>,
     ) -> Result<GatewayGraphQLClient, TritiumError> {
         // GET request with websocket headers
         let mut request = url
             .into_client_request()
             .map_err(|err| TritiumError::GenericError(err.to_string()))?;
 
-        // add auth token header
         let headers = request.headers_mut();
+
+        // add auth token header
         headers.insert("x-tritium-token", auth_token.parse().unwrap());
+
+        // add metadata header
+        let metadata = tritium::session::Metadata {
+            session_type: "graphql",
+            description,
+        };
+        let metadata_json = serde_json::to_string(&metadata).unwrap();
+        headers.insert("x-tritium-session-metadata", metadata_json.parse().unwrap());
 
         let (ws_stream, _) = async_tungstenite::tokio::connect_async(request).await?;
 

@@ -10,7 +10,9 @@ async def main():
     host = os.environ.get("TRITIUM_HOST", "localhost")
 
     print("connecting...")
-    tritium = await tritium_remote.connect(f"ws://{host}:1234", auth_token)
+    tritium = await tritium_remote.connect(
+        f"ws://{host}:1234", auth_token, "Python tritium-remote example - post message"
+    )
 
     while True:
         t = time()

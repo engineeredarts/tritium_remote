@@ -1,17 +1,21 @@
-use simple_logger::SimpleLogger;
+// use simple_logger::SimpleLogger;
 use std::env;
 
 #[tokio::main]
 async fn main() {
     // output *all* log messages, including from underlying transport
-    SimpleLogger::new().env().init().unwrap();
+    // SimpleLogger::new().env().init().unwrap();
 
     let auth_token =
         env::var("TRITIUM_AUTH_TOKEN").expect("TRITIUM_AUTH_TOKEN environment variable not set");
 
-    let mut tritium = tritium_remote::connect("ws://localhost:1234", &auth_token)
-        .await
-        .expect("failed to connect");
+    let mut tritium = tritium_remote::connect(
+        "ws://localhost:1234",
+        &auth_token,
+        Some("tritium-remote example - system info".to_string()),
+    )
+    .await
+    .expect("failed to connect");
 
     let system_info = tritium
         .query_basic_system_info()
