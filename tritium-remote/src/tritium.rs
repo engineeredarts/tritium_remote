@@ -2,6 +2,7 @@ use crate::client::GatewayGraphQLClient;
 
 pub mod scripts;
 pub mod sequences;
+pub mod session;
 pub mod system;
 
 /// A remote Tritium system, connected via unencrypted WebSocket over the LAN.
