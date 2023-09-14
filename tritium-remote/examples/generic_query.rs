@@ -17,7 +17,7 @@ async fn main() {
     .await
     .expect("failed to connect");
 
-    const DOCUMENT: &str = "
+    let document: &str = "
         query { 
             system { 
                 serial  
@@ -25,7 +25,9 @@ async fn main() {
         }
     ";
 
-    let result = tritium.query(&DOCUMENT, None).await.expect("query failed");
+    println!("Document: {document}");
+
+    let result = tritium.query(&document, None).await.expect("query failed");
 
     println!("Result: {result}");
 }
