@@ -1,17 +1,17 @@
 use serde_json::json;
 
 use crate::error::TritiumError;
+use crate::graphql::GenericResponse;
 use crate::tritium::Tritium;
 
 pub type Variables = serde_json::Value;
-pub type ResponseData = serde_json::Value;
 
 impl Tritium {
     pub async fn query(
         &mut self,
         document: &str,
         variables: Option<Variables>,
-    ) -> Result<ResponseData, TritiumError> {
+    ) -> Result<GenericResponse, TritiumError> {
         let variables = variables.unwrap_or_else(|| json!(null));
 
         let query = self
@@ -20,9 +20,6 @@ impl Tritium {
             .await?;
         let response = query.result.await?;
 
-        match response.data {
-            Some(data) => Ok(data),
-            None => Err(TritiumError::GenericError("no response data".to_string())),
-        }
+        Ok(response)
     }
 }

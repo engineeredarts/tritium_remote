@@ -1,6 +1,8 @@
 // use simple_logger::SimpleLogger;
 use std::env;
 
+use serde_json::json;
+
 #[tokio::main]
 async fn main() {
     // output *all* log messages, including from underlying transport
@@ -12,26 +14,35 @@ async fn main() {
     let mut tritium = tritium_remote::connect(
         "ws://localhost:1234",
         &auth_token,
-        Some("tritium-remote example - generic query".to_string()),
+        Some("tritium-remote example - generic mutation".to_string()),
     )
     .await
     .expect("failed to connect");
 
     let document: &str = "
-        query { 
-            system { 
-                serial
-                hosts {
-                    name
-                    cpuCount
-                } 
+        mutation trigger($input:ScriptTriggerInput!){
+            manuallyTriggerScript(input: $input) {
+                script {
+                    status
+                }
             }
-        }
+        }    
     ";
 
     println!("Document: {document}");
 
-    let result = tritium.query(&document, None).await.expect("query failed");
+    let variables = json!( {
+        "input": {
+            "action": "START",
+            "path": "start_stop.py"
+        }
+    });
+    println!("Variables: {variables:?}");
+
+    let result = tritium
+        .query(&document, Some(variables))
+        .await
+        .expect("query failed");
 
     println!("Result: {result:?}");
 }
