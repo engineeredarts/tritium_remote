@@ -20,7 +20,7 @@ async fn main() {
     .expect("failed to connect");
 
     let document: &str = "
-        mutation trigger($input:ScriptTriggerInput!){
+        mutation trigger($input:ScriptTriggerInput!) {
             manuallyTriggerScript(input: $input) {
                 script {
                     status
