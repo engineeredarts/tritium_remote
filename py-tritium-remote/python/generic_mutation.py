@@ -1,5 +1,6 @@
 import os
 import asyncio
+import json
 import tritium_remote
 
 SCRIPT_PATH = "start_stop.py"
@@ -15,18 +16,18 @@ async def main():
     )
 
     document = """
-        query { 
-            system { 
-                serial
-                hosts {
-                    name
-                    cpuCount
-                } 
+        mutation trigger($input:ScriptTriggerInput!) {
+            manuallyTriggerScript(input: $input) {
+                script {
+                    status
+                }
             }
-        }
+        }   
     """
 
-    response = await tritium.query(document, None)
+    variables = {"input": {"action": "START", "path": "start_stop.py"}}
+
+    response = await tritium.query(document, json.dumps(variables))
     print("Response: ", response)
 
 
