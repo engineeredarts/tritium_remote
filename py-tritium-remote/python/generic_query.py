@@ -2,8 +2,6 @@ import os
 import asyncio
 import tritium_remote
 
-SCRIPT_PATH = "start_stop.py"
-
 
 async def main():
     auth_token = os.environ["TRITIUM_AUTH_TOKEN"]
@@ -11,7 +9,7 @@ async def main():
 
     print("connecting...")
     tritium = await tritium_remote.connect(
-        f"ws://{host}:1234", auth_token, "Python tritium-remote example - start script"
+        f"ws://{host}:1234", auth_token, "Python tritium-remote example - list hosts"
     )
 
     document = """
