@@ -24,6 +24,12 @@ This library is currently only published and tested on Linux. However the rust c
 - Start & stop scripts
 - Post messages to named channels to which scripts may subscribe
 
+### Generic Queries and Mutations
+
+- Execute user-supplied GraphQL query or mutation documents
+- Optional variables, supplied as JSON
+- Any response is returned as a JSON encoded object
+
 ## Running Examples
 
 The Rust and Python examples use the _TRITIUM_AUTH_TOKEN_ environment variable to get the JWT access token they need.
