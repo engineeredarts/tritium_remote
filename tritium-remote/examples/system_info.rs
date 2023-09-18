@@ -6,11 +6,15 @@ async fn main() {
     // output *all* log messages, including from underlying transport
     // SimpleLogger::new().env().init().unwrap();
 
+    let host = env::var("TRITIUM_HOST").unwrap_or("localhost".to_string());
+
     let auth_token =
         env::var("TRITIUM_AUTH_TOKEN").expect("TRITIUM_AUTH_TOKEN environment variable not set");
 
+    let url = format!("ws://{host}:1234");
+
     let mut tritium = tritium_remote::connect(
-        "ws://localhost:1234",
+        &url,
         &auth_token,
         Some("tritium-remote example - system info".to_string()),
     )
