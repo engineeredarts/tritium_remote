@@ -1,5 +1,6 @@
 use crate::client::GatewayGraphQLClient;
 
+pub mod generic;
 pub mod scripts;
 pub mod sequences;
 pub mod session;

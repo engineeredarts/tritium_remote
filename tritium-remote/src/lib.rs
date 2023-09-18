@@ -5,6 +5,8 @@ mod tokio_spawner;
 
 mod tritium;
 
+pub use graphql_client;
+
 pub use tritium::scripts::{Script, ScriptStatus};
 pub use tritium::sequences::PlayingSequence;
 pub use tritium::system::TritiumSystemInfo;

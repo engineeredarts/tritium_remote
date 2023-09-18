@@ -104,7 +104,15 @@ pub struct PendingGraphQLRequest<Operation: GraphQLOperation> {
     pub result: Pin<Box<dyn Future<Output = Result<Operation::Response, Error>> + Send>>,
 }
 
+pub type GenericVariables = serde_json::Value;
+
+pub struct PendingGenericGraphQLRequest {
+    pub id: RequestId,
+    pub result: Pin<Box<dyn Future<Output = Result<GenericResponse, Error>> + Send>>,
+}
+
 impl GatewayGraphQLClient {
+    /// Static, strongly-typed query (document must be known at compile time)
     pub async fn graphql_query<'a, Operation>(
         &mut self,
         operation: Operation,
@@ -147,6 +155,50 @@ impl GatewayGraphQLClient {
         });
 
         Ok(PendingGraphQLRequest {
+            id: request_id,
+            result,
+        })
+    }
+
+    /// Generic, non-strongly typed query (document may be created dynamically at runtime)
+    pub async fn generic_graphql_query<'a>(
+        &mut self,
+        document: &str,
+        variables: GenericVariables,
+    ) -> Result<PendingGenericGraphQLRequest, Error> {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        let (sender, receiver) = mpsc::channel(1);
+        self.inner
+            .operations
+            .lock()
+            .await
+            .insert(request_id, sender);
+
+        let msg = json_message(MessageToGateway::GraphQL {
+            auth_token: &self.auth_token,
+            request_id,
+            document: document,
+            variable_values: variables,
+        })
+        .map_err(|err| Error::Send(err.to_string()))?;
+
+        self.sender_sink
+            .send(msg)
+            .await
+            .map_err(|err| Error::Send(err.to_string()))?;
+
+        let result = Box::pin(async move {
+            let (r, _) = receiver.into_future().await;
+            match r {
+                Some(Ok(response)) => Ok(response),
+                Some(Err(error)) => Err(Error::GatewayError(error)),
+                _ => Err(Error::Unknown("no response".to_string())),
+            }
+        });
+
+        Ok(PendingGenericGraphQLRequest {
             id: request_id,
             result,
         })
