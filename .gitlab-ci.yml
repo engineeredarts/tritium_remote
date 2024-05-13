@@ -126,12 +126,12 @@ publish_python_docs:
     - git config --global user.name "gitlab-ci"
   script:
     - VERSION=$(/root/.local/bin/tomlq -r .package.version py-tritium-remote/Cargo.toml)
-    - git clone https://${CI_SERVER_HOST}/tritium/docs docs_repo
+    - git clone https://${CI_SERVER_HOST}/tritium/api_docs docs_repo
     - mkdir -p docs_repo/generated/python/tritium_remote/${VERSION}
     - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
     - git -C docs_repo add -A
     - git -C docs_repo commit -m "Gitlab CI auto-generated documentation"
-    - git -C docs_repo push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/docs.git
+    - git -C docs_repo push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/api_docs.git
   rules:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
