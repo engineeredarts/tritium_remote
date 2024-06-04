@@ -1,5 +1,6 @@
 use crate::error::TritiumError;
-use crate::graphql::queries::basic_system_info::{basic_system_info, BasicSystemInfo};
+use crate::graphql::queries::basic_system_info;
+use crate::graphql::queries::basic_system_info::BasicSystemInfo;
 use crate::graphql::QueryOperation;
 use crate::tritium::Tritium;
 
