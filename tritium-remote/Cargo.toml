@@ -24,4 +24,4 @@ uuid = { version = "1.8", features = ["v4"] }
 log = "0.4"
 
 [dev-dependencies]
-simple_logger = "4"
+simple_logger = { version="4", features=["timestamps", "colors"] }

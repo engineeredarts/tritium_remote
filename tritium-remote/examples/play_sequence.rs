@@ -1,9 +1,13 @@
+use simple_logger::SimpleLogger;
 use std::env;
 
 const PROJECT_PATH: &str = "test_sequence";
 
 #[tokio::main]
 async fn main() {
+    // logging controlled by the RUST_LOG environment variable
+    SimpleLogger::new().env().init().unwrap();
+
     let host = env::var("TRITIUM_HOST").unwrap_or("localhost".to_string());
 
     let auth_token =
@@ -19,11 +23,11 @@ async fn main() {
     .await
     .expect("failed to connect");
 
-    println!("Playing sequence {}", PROJECT_PATH);
+    log::info!("Playing sequence {}", PROJECT_PATH);
     let playing_sequence = tritium
         .play_sequence(PROJECT_PATH)
         .await
         .expect("play sequence mutation failed");
 
-    println!("OK, play_sequence returned: {:?}", playing_sequence);
+    log::info!("OK, play_sequence returned: {:?}", playing_sequence);
 }

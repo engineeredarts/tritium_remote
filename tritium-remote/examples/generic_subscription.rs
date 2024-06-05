@@ -4,7 +4,7 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
-    // output *all* log messages, including from underlying transport
+    // logging controlled by the RUST_LOG environment variable
     SimpleLogger::new().env().init().unwrap();
 
     let auth_token =
@@ -27,20 +27,20 @@ async fn main() {
         }
     ";
 
-    println!("Document: {document}");
+    log::info!("Document: {document}");
 
     let mut sub = tritium
         .subscription(&document, None)
         .await
         .expect("subscription failed");
 
-    println!("Subscription: {sub:?}");
+    log::info!("Subscription: {sub:?}");
 
     loop {
         match sub.results.next().await {
             Some(r) => {
                 let data = r.data;
-                println!("Subscription data: {data:#?}");
+                log::info!("Subscription data: {data:#?}");
             }
             None => {
                 break;
