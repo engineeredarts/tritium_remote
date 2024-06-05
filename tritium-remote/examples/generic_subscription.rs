@@ -1,10 +1,10 @@
-// use simple_logger::SimpleLogger;
+use simple_logger::SimpleLogger;
 use std::env;
 
 #[tokio::main]
 async fn main() {
     // output *all* log messages, including from underlying transport
-    // SimpleLogger::new().env().init().unwrap();
+    SimpleLogger::new().env().init().unwrap();
 
     let auth_token =
         env::var("TRITIUM_AUTH_TOKEN").expect("TRITIUM_AUTH_TOKEN environment variable not set");

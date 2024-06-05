@@ -73,7 +73,6 @@ impl GatewayGraphQLClientBuilder {
         let receiver_handle = runtime
             .spawn_with_handle(receiver_loop(
                 websocket_stream,
-                sender_sink.clone(),
                 Arc::clone(&operations),
                 shutdown_sender,
             ))
@@ -218,7 +217,7 @@ impl GatewayGraphQLClient {
         let request_id = self.next_request_id;
         self.next_request_id += 1;
 
-        let (sender, _receiver) = mpsc::channel(1);
+        let (sender, receiver) = mpsc::channel(1);
         self.inner
             .operations
             .lock()
@@ -228,7 +227,7 @@ impl GatewayGraphQLClient {
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
             request_id,
-            document: document,
+            document,
             variable_values: variables,
         })
         .map_err(|err| Error::Send(err.to_string()))?;
@@ -238,21 +237,22 @@ impl GatewayGraphQLClient {
             .await
             .map_err(|err| Error::Send(err.to_string()))?;
 
-        todo!()
+        let result = Box::pin(async move {
+            let (r, _) = receiver.into_future().await;
+            match r {
+                Some(Ok(_response)) => {
+                    let subscription = GenericSubscription {};
+                    Ok(subscription)
+                }
+                Some(Err(error)) => Err(Error::GatewayError(error)),
+                _ => Err(Error::Unknown("no response".to_string())),
+            }
+        });
 
-        // let result = Box::pin(async move {
-        //     let (r, _) = receiver.into_future().await;
-        //     match r {
-        //         Some(Ok(response)) => Ok(response),
-        //         Some(Err(error)) => Err(Error::GatewayError(error)),
-        //         _ => Err(Error::Unknown("no response".to_string())),
-        //     }
-        // });
-
-        // Ok(PendingGenericGraphQLSubscription {
-        //     id: request_id,
-        //     result,
-        // })
+        Ok(PendingGenericGraphQLSubscription {
+            id: request_id,
+            result,
+        })
     }
 }
 
@@ -271,13 +271,12 @@ type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
 
 async fn receiver_loop(
     mut receiver: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
-    mut sender: mpsc::Sender<Message>,
     operations: OperationMap,
     shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error> {
     while let Some(msg) = receiver.next().await {
         trace!("Received message: {:?}", msg);
-        if let Err(err) = handle_message(msg, &mut sender, &operations).await {
+        if let Err(err) = handle_message(msg, &operations).await {
             warn!("message handler error, shutting down: {err:?}");
             break;
         }
@@ -290,7 +289,6 @@ async fn receiver_loop(
 
 async fn handle_message(
     msg: Result<Message, tungstenite::Error>,
-    _sender: &mut mpsc::Sender<Message>,
     operations: &OperationMap,
 ) -> Result<(), Error> {
     let from_gateway = decode_message::<MessageFromGateway<GenericResponse>>(
@@ -316,7 +314,7 @@ async fn handle_message(
             let mut sink = operations
                 .lock()
                 .await
-                .remove(&request_id) // TODO only remove if no more messages expected
+                .get(&request_id) // TODO only remove if no more messages expected
                 .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
                 .clone();
 
