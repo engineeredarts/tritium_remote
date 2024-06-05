@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use crate::error::TritiumError;
-use crate::graphql::GenericResponse;
+use crate::graphql::{GenericResponse, GenericSubscriptionResponse};
 use crate::tritium::Tritium;
 
 pub type Variables = serde_json::Value;
@@ -21,5 +21,13 @@ impl Tritium {
         let response = query.result.await?;
 
         Ok(response)
+    }
+
+    pub async fn subscription(
+        &mut self,
+        _document: &str,
+        _variables: Option<Variables>,
+    ) -> Result<GenericSubscriptionResponse, TritiumError> {
+        todo!()
     }
 }

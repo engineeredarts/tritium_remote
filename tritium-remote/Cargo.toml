@@ -10,7 +10,7 @@ readme = "../README.md"
 
 
 [dependencies]
-tokio = { version = "1.38", features = ["rt"] }
+tokio = { version = "1.38", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-stream = "0.1"
 tungstenite = { version = "0.23" }
 async-tungstenite = { version = "0.26", features=["tokio-runtime"] }
