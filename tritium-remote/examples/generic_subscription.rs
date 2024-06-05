@@ -1,3 +1,4 @@
+use futures::stream::StreamExt;
 use simple_logger::SimpleLogger;
 use std::env;
 
@@ -12,7 +13,7 @@ async fn main() {
     let mut tritium = tritium_remote::connect(
         "ws://localhost:1234",
         &auth_token,
-        Some("tritium-remote example - generic mutation".to_string()),
+        Some("tritium-remote example - generic subscription".to_string()),
     )
     .await
     .expect("failed to connect");
@@ -28,10 +29,22 @@ async fn main() {
 
     println!("Document: {document}");
 
-    let result = tritium
+    let mut sub = tritium
         .subscription(&document, None)
         .await
         .expect("subscription failed");
 
-    println!("Result: {result:?}");
+    println!("Subscription: {sub:?}");
+
+    loop {
+        match sub.results.next().await {
+            Some(r) => {
+                let data = r.data;
+                println!("Subscription data: {data:#?}");
+            }
+            None => {
+                break;
+            }
+        }
+    }
 }

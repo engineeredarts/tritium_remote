@@ -238,10 +238,34 @@ impl GatewayGraphQLClient {
             .map_err(|err| Error::Send(err.to_string()))?;
 
         let result = Box::pin(async move {
-            let (r, _) = receiver.into_future().await;
+            let (r, stream) = receiver.into_future().await;
             match r {
-                Some(Ok(_response)) => {
-                    let subscription = GenericSubscription {};
+                Some(Ok(response)) => {
+                    let (mut tx, rx) = mpsc::channel(1);
+
+                    let _ = tx.send(response).await;
+
+                    let mut stream = stream;
+                    tokio::spawn(async move {
+                        loop {
+                            let (r, s) = stream.into_future().await;
+                            stream = s;
+
+                            match r {
+                                Some(Ok(r)) => {
+                                    if tx.send(r).await.is_err() {
+                                        break;
+                                    }
+                                }
+                                _ => {
+                                    // ?
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    let subscription = GenericSubscription { results: rx };
                     Ok(subscription)
                 }
                 Some(Err(error)) => Err(Error::GatewayError(error)),
