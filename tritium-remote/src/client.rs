@@ -339,26 +339,23 @@ pub enum Error {
     /// Unknown error
     #[error("unknown: {0}")]
     Unknown(String),
-    // /// Custom error
-    // #[error("{0}: {1}")]
-    // Custom(String, String),
     /// Unexpected close frame
-    #[error("got close frame, reason: {0}")]
+    #[error("unexpected close frame, reason: {0}")]
     Close(String),
     /// Decoding / parsing error
-    #[error("message decode error, reason: {0}")]
+    #[error("message decode error: {0}")]
     Decode(String),
+    /// Encoding error
+    #[error("message encode error: {0}")]
+    Encode(String),
     /// Sending error
-    #[error("message sending error, reason: {0}")]
+    #[error("message send error: {0}")]
     Send(String),
-    // /// Futures spawn error
-    // #[error("futures spawn error, reason: {0}")]
-    // SpawnHandle(String),
     /// Sender shutdown error
-    #[error("sender shutdown error, reason: {0}")]
+    #[error("sender shutdown error: {0}")]
     SenderShutdown(String),
     /// Binary messages not supported (yet)
-    #[error("binary messages not yet supported")]
+    #[error("binary messages not supported")]
     BinaryMessagesNotSupported(),
     /// Any error message returned by Gateway
     #[error("{0}")]
@@ -412,7 +409,7 @@ async fn sender_loop(
 
 fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
     Ok(Message::Text(
-        serde_json::to_string(&payload).map_err(|err| Error::Decode(err.to_string()))?,
+        serde_json::to_string(&payload).map_err(|err| Error::Encode(err.to_string()))?,
     ))
 }
 
