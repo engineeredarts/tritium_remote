@@ -14,7 +14,7 @@ use async_tungstenite::tungstenite::Message;
 
 use crate::{
     error::TritiumError,
-    graphql::{GenericResponse, GraphQLOperation},
+    graphql::{GenericResponse, GenericSubscription, GraphQLOperation},
     protocol::{MessageFromGateway, MessageToGateway},
     tokio_spawner::TokioSpawner,
     tritium,
@@ -111,6 +111,11 @@ pub struct PendingGenericGraphQLRequest {
     pub result: Pin<Box<dyn Future<Output = Result<GenericResponse, Error>> + Send>>,
 }
 
+pub struct PendingGenericGraphQLSubscription {
+    pub id: RequestId,
+    pub result: Pin<Box<dyn Future<Output = Result<GenericSubscription, Error>> + Send>>,
+}
+
 impl GatewayGraphQLClient {
     /// Static, strongly-typed query (document must be known at compile time)
     pub async fn graphql_query<'a, Operation>(
@@ -202,6 +207,52 @@ impl GatewayGraphQLClient {
             id: request_id,
             result,
         })
+    }
+
+    /// Generic, non-strongly typed subscription (document may be created dynamically at runtime)
+    pub async fn generic_graphql_subscription<'a>(
+        &mut self,
+        document: &str,
+        variables: GenericVariables,
+    ) -> Result<PendingGenericGraphQLSubscription, Error> {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        let (sender, _receiver) = mpsc::channel(1);
+        self.inner
+            .operations
+            .lock()
+            .await
+            .insert(request_id, sender);
+
+        let msg = json_message(MessageToGateway::GraphQL {
+            auth_token: &self.auth_token,
+            request_id,
+            document: document,
+            variable_values: variables,
+        })
+        .map_err(|err| Error::Send(err.to_string()))?;
+
+        self.sender_sink
+            .send(msg)
+            .await
+            .map_err(|err| Error::Send(err.to_string()))?;
+
+        todo!()
+
+        // let result = Box::pin(async move {
+        //     let (r, _) = receiver.into_future().await;
+        //     match r {
+        //         Some(Ok(response)) => Ok(response),
+        //         Some(Err(error)) => Err(Error::GatewayError(error)),
+        //         _ => Err(Error::Unknown("no response".to_string())),
+        //     }
+        // });
+
+        // Ok(PendingGenericGraphQLSubscription {
+        //     id: request_id,
+        //     result,
+        // })
     }
 }
 

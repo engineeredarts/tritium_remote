@@ -1,2 +1,2 @@
 #[derive(Debug)]
-pub struct GenericSubscriptionResponse; // TODO
+pub struct GenericSubscription {}
