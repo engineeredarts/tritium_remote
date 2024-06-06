@@ -1,13 +1,13 @@
 use futures::{
     channel::{mpsc, oneshot},
-    future::{Future, RemoteHandle},
+    future::Future,
     lock::Mutex,
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
-    task::SpawnExt,
 };
 use log::{trace, warn};
 use std::{collections::HashMap, pin::Pin, sync::Arc};
+use tokio::task::JoinHandle;
 
 use async_tungstenite::tungstenite::client::IntoClientRequest;
 use async_tungstenite::tungstenite::Message;
@@ -16,7 +16,6 @@ use crate::{
     error::TritiumError,
     graphql::{GenericResponse, GenericSubscription, GraphQLOperation},
     protocol::{MessageFromGateway, MessageToGateway},
-    tokio_spawner::TokioSpawner,
     tritium,
 };
 
@@ -59,24 +58,18 @@ impl GatewayGraphQLClientBuilder {
         let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-        let runtime = TokioSpawner::current();
+        let sender_handle = tokio::spawn(sender_loop(
+            sender_stream,
+            websocket_sink,
+            Arc::clone(&operations),
+            shutdown_receiver,
+        ));
 
-        let sender_handle = runtime
-            .spawn_with_handle(sender_loop(
-                sender_stream,
-                websocket_sink,
-                Arc::clone(&operations),
-                shutdown_receiver,
-            ))
-            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
-
-        let receiver_handle = runtime
-            .spawn_with_handle(receiver_loop(
-                websocket_stream,
-                Arc::clone(&operations),
-                shutdown_sender,
-            ))
-            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
+        let receiver_handle = tokio::spawn(receiver_loop(
+            websocket_stream,
+            Arc::clone(&operations),
+            shutdown_sender,
+        ));
 
         Ok(GatewayGraphQLClient {
             inner: Arc::new(ClientInner {
@@ -282,9 +275,9 @@ impl GatewayGraphQLClient {
 
 struct ClientInner {
     #[allow(dead_code)]
-    receiver_handle: RemoteHandle<Result<(), Error>>,
+    receiver_handle: JoinHandle<Result<(), Error>>,
     #[allow(dead_code)]
-    sender_handle: RemoteHandle<Result<(), Error>>,
+    sender_handle: JoinHandle<Result<(), Error>>,
     operations: OperationMap,
 }
 
