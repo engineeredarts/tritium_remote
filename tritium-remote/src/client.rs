@@ -234,9 +234,9 @@ impl GatewayGraphQLClient {
             let (r, stream) = receiver.into_future().await;
             match r {
                 Some(Ok(response)) => {
-                    let (mut tx, rx) = mpsc::channel(1);
+                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
-                    let _ = tx.send(response).await;
+                    let _ = tx.send(response);
 
                     let mut stream = stream;
                     tokio::spawn(async move {
@@ -246,7 +246,7 @@ impl GatewayGraphQLClient {
 
                             match r {
                                 Some(Ok(r)) => {
-                                    if tx.send(r).await.is_err() {
+                                    if tx.send(r).is_err() {
                                         break;
                                     }
                                 }

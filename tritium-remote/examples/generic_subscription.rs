@@ -1,4 +1,3 @@
-use futures::stream::StreamExt;
 use simple_logger::SimpleLogger;
 use std::env;
 
@@ -37,7 +36,7 @@ async fn main() {
     log::info!("Subscription: {sub:?}");
 
     loop {
-        match sub.results.next().await {
+        match sub.results.recv().await {
             Some(r) => {
                 let data = r.data;
                 log::info!("Subscription data: {data:#?}");
