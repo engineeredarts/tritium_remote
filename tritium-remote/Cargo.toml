@@ -1,6 +1,6 @@
 [package]
 name = "tritium_remote"
-version = "1.4.1"
+version = "1.5.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Engineered Arts Ltd"]
