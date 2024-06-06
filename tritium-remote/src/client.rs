@@ -55,19 +55,19 @@ impl GatewayGraphQLClientBuilder {
         let (websocket_sink, websocket_stream) = ws_stream.split();
 
         let operations = Arc::new(Mutex::new(HashMap::new()));
+
         let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
         let sender_handle = tokio::spawn(sender_loop(
             sender_stream,
             websocket_sink,
-            Arc::clone(&operations),
             shutdown_receiver,
         ));
 
         let receiver_handle = tokio::spawn(receiver_loop(
             websocket_stream,
-            Arc::clone(&operations),
+            operations.clone(),
             shutdown_sender,
         ));
 
@@ -121,11 +121,11 @@ impl GatewayGraphQLClient {
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner
-            .operations
-            .lock()
-            .await
-            .insert(request_id, sender);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: false,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
 
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
@@ -167,11 +167,11 @@ impl GatewayGraphQLClient {
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner
-            .operations
-            .lock()
-            .await
-            .insert(request_id, sender);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: false,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
 
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
@@ -211,11 +211,11 @@ impl GatewayGraphQLClient {
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner
-            .operations
-            .lock()
-            .await
-            .insert(request_id, sender);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: true,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
 
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
@@ -281,10 +281,15 @@ struct ClientInner {
     operations: OperationMap,
 }
 
-type OperationResponse = Result<GenericResponse, String>;
-type OperationSender = mpsc::Sender<OperationResponse>;
 type RequestId = u64;
-type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
+type OperationResponse = Result<GenericResponse, String>;
+type OperationMap = Arc<Mutex<HashMap<RequestId, OperationResponseHandler>>>;
+
+#[derive(Clone)]
+struct OperationResponseHandler {
+    response_tx: mpsc::Sender<OperationResponse>,
+    expect_more: bool,
+}
 
 async fn receiver_loop(
     mut receiver: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
@@ -294,8 +299,7 @@ async fn receiver_loop(
     while let Some(msg) = receiver.next().await {
         trace!("Received message: {:?}", msg);
         if let Err(err) = handle_message(msg, &operations).await {
-            warn!("message handler error, shutting down: {err:?}");
-            break;
+            warn!("message handler error: {err:?}");
         }
     }
 
@@ -328,21 +332,30 @@ async fn handle_message(
             trace!("  request id: {}", request_id);
             trace!("  data: {:?}", data);
 
-            let mut sink = operations
-                .lock()
-                .await
-                .get(&request_id) // TODO only remove if no more messages expected
-                .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
-                .clone();
+            let ops = operations.lock().await;
 
+            let op = ops
+                .get(&request_id) // TODO only remove if no more messages expected
+                .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?;
+
+            // TODO support both data and errors in response?
+            let mut tx = op.response_tx.clone();
             if let Some(d) = data {
-                sink.send(Ok(d))
+                // pass data on to operation
+                tx.send(Ok(d))
                     .await
                     .map_err(|err| Error::Send(err.to_string()))?
             } else if let Some(e) = error {
-                sink.send(Err(e))
+                // ...or any error
+                tx.send(Err(e))
                     .await
                     .map_err(|err| Error::Send(err.to_string()))?
+            }
+
+            // operation complete if query or mutation
+            if !op.expect_more {
+                let mut ops = ops;
+                ops.remove(&request_id);
             }
         }
     }
@@ -388,7 +401,6 @@ impl From<Error> for TritiumError {
 async fn sender_loop(
     message_stream: mpsc::Receiver<Message>,
     mut ws_sender: impl Sink<Message, Error = tungstenite::Error> + Unpin,
-    operations: OperationMap,
     shutdown: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
     use futures::{future::FutureExt, select};
@@ -414,9 +426,6 @@ async fn sender_loop(
                 let mut message_stream = message_stream.into_inner();
                 message_stream.close();
                 while message_stream.next().await.is_some() {}
-
-                // Clear out any operations
-                operations.lock().await.clear();
 
                 return Ok(());
             }
