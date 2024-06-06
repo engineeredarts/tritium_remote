@@ -32,7 +32,6 @@ class TritiumRemoteClient:
 
         self._listen_task = asyncio.create_task(listen())
 
-
     async def query(self, document, variables=None):
         request_id = self._next_request_id
         self._next_request_id += 1
@@ -50,7 +49,6 @@ class TritiumRemoteClient:
         return future.result()
 
     async def _send_graphql_message(self, request_id, document, variables):
-
         msg = json.dumps(
             {
                 "type": "graphql",
@@ -64,12 +62,12 @@ class TritiumRemoteClient:
         await self._ws.send(msg)
 
     def _on_message(self, msg):
-        print("MESSAGE", msg)
+        # print("MESSAGE", msg)
 
         try:
             m = json.loads(msg)
         except Exception as e:
-            print("failed to decode message JSON", e) 
+            print("failed to decode message JSON", e)
             return
 
         try:
@@ -77,7 +75,7 @@ class TritiumRemoteClient:
             data = m["data"]
             request_id = m["request_id"]
         except KeyError as e:
-            print("bad message", e) 
+            print("bad message", e)
             return
 
         if message_type == "graphql_response":
@@ -86,9 +84,8 @@ class TritiumRemoteClient:
             print("unrecognised message type:", message_type)
 
     def _on_graphql_response(self, request_id, data):
-        try: 
+        try:
             query = self._queries_by_id.pop(request_id)
             query.set_result(data)
         except KeyError:
             pass
-
