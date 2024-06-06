@@ -11,7 +11,9 @@ async def main():
 
     print("connecting...")
     tritium = await tritium_remote.connect(
-        f"ws://{host}:1234", auth_token, "Python tritium-remote example - generic query (list hosts)"
+        f"ws://{host}:1234",
+        auth_token,
+        "Python tritium-remote example - generic query (list hosts)",
     )
 
     document = """
@@ -27,7 +29,7 @@ async def main():
     """
 
     response = await tritium.query(document, None)
-    print("Response: ", response)
+    print("Response: ", type(response), response)
 
 
 asyncio.run(main())

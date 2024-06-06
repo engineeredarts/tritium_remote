@@ -2,8 +2,6 @@ import asyncio
 import websockets
 import json
 
-# websocket.enableTrace(True)
-
 
 class TritiumRemoteClient:
     def __init__(self, url, auth_token, description):
@@ -13,16 +11,8 @@ class TritiumRemoteClient:
         self._next_request_id = 0
         self._queries_by_id = {}
 
-    @property
-    def headers(self):
-        auth_token = self._auth_token
-        metadata = json.dumps(
-            {"session_type": "graphql", "description": self._description}
-        )
-        return {"x-tritium-token": auth_token, "x-tritium-session-metadata": metadata}
-
     async def connect(self):
-        ws = await websockets.connect(self._url, extra_headers=self.headers)
+        ws = await websockets.connect(self._url, extra_headers=self._headers)
         self._ws = ws
 
         async def listen():
@@ -48,6 +38,16 @@ class TritiumRemoteClient:
 
         return future.result()
 
+    ##########################################################################
+
+    @property
+    def _headers(self):
+        auth_token = self._auth_token
+        metadata = json.dumps(
+            {"session_type": "graphql", "description": self._description}
+        )
+        return {"x-tritium-token": auth_token, "x-tritium-session-metadata": metadata}
+
     async def _send_graphql_message(self, request_id, document, variables):
         msg = json.dumps(
             {
@@ -72,20 +72,20 @@ class TritiumRemoteClient:
 
         try:
             message_type = m["type"]
-            data = m["data"]
+            result = m["data"]
             request_id = m["request_id"]
         except KeyError as e:
             print("bad message", e)
             return
 
         if message_type == "graphql_response":
-            self._on_graphql_response(request_id, data)
+            self._on_graphql_response(request_id, result)
         else:
             print("unrecognised message type:", message_type)
 
-    def _on_graphql_response(self, request_id, data):
+    def _on_graphql_response(self, request_id, result):
         try:
             query = self._queries_by_id.pop(request_id)
-            query.set_result(data)
+            query.set_result(result)
         except KeyError:
             pass
