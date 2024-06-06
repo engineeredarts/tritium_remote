@@ -34,8 +34,8 @@ impl Tritium {
             .client
             .generic_graphql_subscription(document, variables)
             .await?;
-        let response = subscription.result.await?;
+        let sub = subscription.result.await?;
 
-        Ok(response)
+        Ok(sub)
     }
 }
