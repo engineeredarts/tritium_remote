@@ -29,8 +29,8 @@ async def main():
         }
     """
 
-    subscription = await tritium.subscribe(document, None, on_response)
-    print("Subscription:", subscription)
+    async for result in tritium.subscribe(document, None):
+        print("Result:", result)
 
 
 asyncio.run(main())

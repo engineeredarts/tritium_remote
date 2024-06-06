@@ -10,6 +10,7 @@ class TritiumRemoteClient:
         self._description = description
         self._next_request_id = 0
         self._queries_by_id = {}
+        self._subscriptions_by_id = {}
 
     async def connect(self):
         ws = await websockets.connect(self._url, extra_headers=self._headers)
@@ -23,10 +24,7 @@ class TritiumRemoteClient:
         self._listen_task = asyncio.create_task(listen())
 
     async def query(self, document, variables=None):
-        request_id = self._next_request_id
-        self._next_request_id += 1
-
-        await self._send_graphql_message(request_id, document, variables)
+        request_id = await self._send_graphql_message(document, variables)
 
         loop = asyncio.get_running_loop()
         future = loop.create_future()
@@ -38,6 +36,17 @@ class TritiumRemoteClient:
 
         return future.result()
 
+    async def subscribe(self, document, variables=None):
+        request_id = await self._send_graphql_message(document, variables)
+
+        queue = asyncio.Queue()
+
+        self._subscriptions_by_id[request_id] = queue
+
+        while True:
+            result = await queue.get()
+            yield result
+
     ##########################################################################
 
     @property
@@ -48,7 +57,10 @@ class TritiumRemoteClient:
         )
         return {"x-tritium-token": auth_token, "x-tritium-session-metadata": metadata}
 
-    async def _send_graphql_message(self, request_id, document, variables):
+    async def _send_graphql_message(self, document, variables):
+        request_id = self._next_request_id
+        self._next_request_id += 1
+
         msg = json.dumps(
             {
                 "type": "graphql",
@@ -60,6 +72,8 @@ class TritiumRemoteClient:
         )
 
         await self._ws.send(msg)
+
+        return request_id
 
     def _on_message(self, msg):
         # print("MESSAGE", msg)
@@ -87,5 +101,12 @@ class TritiumRemoteClient:
         try:
             query = self._queries_by_id.pop(request_id)
             query.set_result(result)
+            return
+        except KeyError:
+            pass
+
+        try:
+            sub = self._subscriptions_by_id[request_id]
+            sub.put_nowait(result)
         except KeyError:
             pass
