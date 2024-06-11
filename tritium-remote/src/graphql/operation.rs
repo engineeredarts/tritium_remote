@@ -1,9 +1,6 @@
 use graphql_client::{GraphQLQuery, QueryBody, Response};
 use serde_json::json;
 
-pub mod mutations;
-pub mod queries;
-
 pub type GenericResponse = Response<serde_json::Value>;
 
 /// An abstraction over GraphQL operations.

@@ -1,22 +1,21 @@
 use futures::{
     channel::{mpsc, oneshot},
-    future::{Future, RemoteHandle},
+    future::Future,
     lock::Mutex,
     sink::{Sink, SinkExt},
     stream::{Stream, StreamExt},
-    task::SpawnExt,
 };
 use log::{trace, warn};
 use std::{collections::HashMap, pin::Pin, sync::Arc};
+use tokio::task::JoinHandle;
 
 use async_tungstenite::tungstenite::client::IntoClientRequest;
 use async_tungstenite::tungstenite::Message;
 
 use crate::{
     error::TritiumError,
-    graphql::{GenericResponse, GraphQLOperation},
+    graphql::{GenericResponse, GenericSubscription, GraphQLOperation},
     protocol::{MessageFromGateway, MessageToGateway},
-    tokio_spawner::TokioSpawner,
     tritium,
 };
 
@@ -56,28 +55,21 @@ impl GatewayGraphQLClientBuilder {
         let (websocket_sink, websocket_stream) = ws_stream.split();
 
         let operations = Arc::new(Mutex::new(HashMap::new()));
+
         let (sender_sink, sender_stream) = mpsc::channel::<Message>(1);
         let (shutdown_sender, shutdown_receiver) = oneshot::channel();
 
-        let runtime = TokioSpawner::current();
+        let sender_handle = tokio::spawn(sender_loop(
+            sender_stream,
+            websocket_sink,
+            shutdown_receiver,
+        ));
 
-        let sender_handle = runtime
-            .spawn_with_handle(sender_loop(
-                sender_stream,
-                websocket_sink,
-                Arc::clone(&operations),
-                shutdown_receiver,
-            ))
-            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
-
-        let receiver_handle = runtime
-            .spawn_with_handle(receiver_loop(
-                websocket_stream,
-                sender_sink.clone(),
-                Arc::clone(&operations),
-                shutdown_sender,
-            ))
-            .map_err(|err| TritiumError::GenericError(err.to_string()))?;
+        let receiver_handle = tokio::spawn(receiver_loop(
+            websocket_stream,
+            operations.clone(),
+            shutdown_sender,
+        ));
 
         Ok(GatewayGraphQLClient {
             inner: Arc::new(ClientInner {
@@ -111,6 +103,11 @@ pub struct PendingGenericGraphQLRequest {
     pub result: Pin<Box<dyn Future<Output = Result<GenericResponse, Error>> + Send>>,
 }
 
+pub struct PendingGenericGraphQLSubscription {
+    pub id: RequestId,
+    pub result: Pin<Box<dyn Future<Output = Result<GenericSubscription, Error>> + Send>>,
+}
+
 impl GatewayGraphQLClient {
     /// Static, strongly-typed query (document must be known at compile time)
     pub async fn graphql_query<'a, Operation>(
@@ -124,11 +121,11 @@ impl GatewayGraphQLClient {
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner
-            .operations
-            .lock()
-            .await
-            .insert(request_id, sender);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: false,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
 
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
@@ -170,11 +167,11 @@ impl GatewayGraphQLClient {
         self.next_request_id += 1;
 
         let (sender, receiver) = mpsc::channel(1);
-        self.inner
-            .operations
-            .lock()
-            .await
-            .insert(request_id, sender);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: false,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
 
         let msg = json_message(MessageToGateway::GraphQL {
             auth_token: &self.auth_token,
@@ -203,32 +200,106 @@ impl GatewayGraphQLClient {
             result,
         })
     }
+
+    /// Generic, non-strongly typed subscription (document may be created dynamically at runtime)
+    pub async fn generic_graphql_subscription<'a>(
+        &mut self,
+        document: &str,
+        variables: GenericVariables,
+    ) -> Result<PendingGenericGraphQLSubscription, Error> {
+        let request_id = self.next_request_id;
+        self.next_request_id += 1;
+
+        let (sender, receiver) = mpsc::channel(1);
+        let op = OperationResponseHandler {
+            response_tx: sender,
+            expect_more: true,
+        };
+        self.inner.operations.lock().await.insert(request_id, op);
+
+        let msg = json_message(MessageToGateway::GraphQL {
+            auth_token: &self.auth_token,
+            request_id,
+            document,
+            variable_values: variables,
+        })
+        .map_err(|err| Error::Send(err.to_string()))?;
+
+        self.sender_sink
+            .send(msg)
+            .await
+            .map_err(|err| Error::Send(err.to_string()))?;
+
+        let result = Box::pin(async move {
+            let (r, stream) = receiver.into_future().await;
+            match r {
+                Some(Ok(response)) => {
+                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+                    let _ = tx.send(response);
+
+                    let mut stream = stream;
+                    tokio::spawn(async move {
+                        loop {
+                            let (r, s) = stream.into_future().await;
+                            stream = s;
+
+                            match r {
+                                Some(Ok(r)) => {
+                                    if tx.send(r).is_err() {
+                                        break;
+                                    }
+                                }
+                                _ => {
+                                    // ?
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    let subscription = GenericSubscription { results: rx };
+                    Ok(subscription)
+                }
+                Some(Err(error)) => Err(Error::GatewayError(error)),
+                _ => Err(Error::Unknown("no response".to_string())),
+            }
+        });
+
+        Ok(PendingGenericGraphQLSubscription {
+            id: request_id,
+            result,
+        })
+    }
 }
 
 struct ClientInner {
     #[allow(dead_code)]
-    receiver_handle: RemoteHandle<Result<(), Error>>,
+    receiver_handle: JoinHandle<Result<(), Error>>,
     #[allow(dead_code)]
-    sender_handle: RemoteHandle<Result<(), Error>>,
+    sender_handle: JoinHandle<Result<(), Error>>,
     operations: OperationMap,
 }
 
-type OperationResponse = Result<GenericResponse, String>;
-type OperationSender = mpsc::Sender<OperationResponse>;
 type RequestId = u64;
-type OperationMap = Arc<Mutex<HashMap<RequestId, OperationSender>>>;
+type OperationResponse = Result<GenericResponse, String>;
+type OperationMap = Arc<Mutex<HashMap<RequestId, OperationResponseHandler>>>;
+
+#[derive(Clone)]
+struct OperationResponseHandler {
+    response_tx: mpsc::Sender<OperationResponse>,
+    expect_more: bool,
+}
 
 async fn receiver_loop(
     mut receiver: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
-    mut sender: mpsc::Sender<Message>,
     operations: OperationMap,
     shutdown: oneshot::Sender<()>,
 ) -> Result<(), Error> {
     while let Some(msg) = receiver.next().await {
         trace!("Received message: {:?}", msg);
-        if let Err(err) = handle_message(msg, &mut sender, &operations).await {
-            warn!("message handler error, shutting down: {err:?}");
-            break;
+        if let Err(err) = handle_message(msg, &operations).await {
+            warn!("message handler error: {err:?}");
         }
     }
 
@@ -239,7 +310,6 @@ async fn receiver_loop(
 
 async fn handle_message(
     msg: Result<Message, tungstenite::Error>,
-    _sender: &mut mpsc::Sender<Message>,
     operations: &OperationMap,
 ) -> Result<(), Error> {
     let from_gateway = decode_message::<MessageFromGateway<GenericResponse>>(
@@ -262,21 +332,30 @@ async fn handle_message(
             trace!("  request id: {}", request_id);
             trace!("  data: {:?}", data);
 
-            let mut sink = operations
-                .lock()
-                .await
-                .remove(&request_id) // TODO only remove if no more messages expected
-                .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?
-                .clone();
+            let ops = operations.lock().await;
 
+            let op = ops
+                .get(&request_id) // TODO only remove if no more messages expected
+                .ok_or_else(|| Error::Decode("Received message for unknown request".to_owned()))?;
+
+            // TODO support both data and errors in response?
+            let mut tx = op.response_tx.clone();
             if let Some(d) = data {
-                sink.send(Ok(d))
+                // pass data on to operation
+                tx.send(Ok(d))
                     .await
                     .map_err(|err| Error::Send(err.to_string()))?
             } else if let Some(e) = error {
-                sink.send(Err(e))
+                // ...or any error
+                tx.send(Err(e))
                     .await
                     .map_err(|err| Error::Send(err.to_string()))?
+            }
+
+            // operation complete if query or mutation
+            if !op.expect_more {
+                let mut ops = ops;
+                ops.remove(&request_id);
             }
         }
     }
@@ -290,26 +369,23 @@ pub enum Error {
     /// Unknown error
     #[error("unknown: {0}")]
     Unknown(String),
-    // /// Custom error
-    // #[error("{0}: {1}")]
-    // Custom(String, String),
     /// Unexpected close frame
-    #[error("got close frame, reason: {0}")]
+    #[error("unexpected close frame, reason: {0}")]
     Close(String),
     /// Decoding / parsing error
-    #[error("message decode error, reason: {0}")]
+    #[error("message decode error: {0}")]
     Decode(String),
+    /// Encoding error
+    #[error("message encode error: {0}")]
+    Encode(String),
     /// Sending error
-    #[error("message sending error, reason: {0}")]
+    #[error("message send error: {0}")]
     Send(String),
-    // /// Futures spawn error
-    // #[error("futures spawn error, reason: {0}")]
-    // SpawnHandle(String),
     /// Sender shutdown error
-    #[error("sender shutdown error, reason: {0}")]
+    #[error("sender shutdown error: {0}")]
     SenderShutdown(String),
     /// Binary messages not supported (yet)
-    #[error("binary messages not yet supported")]
+    #[error("binary messages not supported")]
     BinaryMessagesNotSupported(),
     /// Any error message returned by Gateway
     #[error("{0}")]
@@ -325,7 +401,6 @@ impl From<Error> for TritiumError {
 async fn sender_loop(
     message_stream: mpsc::Receiver<Message>,
     mut ws_sender: impl Sink<Message, Error = tungstenite::Error> + Unpin,
-    operations: OperationMap,
     shutdown: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
     use futures::{future::FutureExt, select};
@@ -352,9 +427,6 @@ async fn sender_loop(
                 message_stream.close();
                 while message_stream.next().await.is_some() {}
 
-                // Clear out any operations
-                operations.lock().await.clear();
-
                 return Ok(());
             }
         }
@@ -363,7 +435,7 @@ async fn sender_loop(
 
 fn json_message(payload: impl serde::Serialize) -> Result<Message, Error> {
     Ok(Message::Text(
-        serde_json::to_string(&payload).map_err(|err| Error::Decode(err.to_string()))?,
+        serde_json::to_string(&payload).map_err(|err| Error::Encode(err.to_string()))?,
     ))
 }
 

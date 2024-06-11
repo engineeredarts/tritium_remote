@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import asyncio
 import json
@@ -12,7 +14,7 @@ async def main():
 
     print("connecting...")
     tritium = await tritium_remote.connect(
-        f"ws://{host}:1234", auth_token, "Python tritium-remote example - start script"
+        f"ws://{host}:1234", auth_token, "Python tritium-remote example - generic mutation (start script)"
     )
 
     document = """

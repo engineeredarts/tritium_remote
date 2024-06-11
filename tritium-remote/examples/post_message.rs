@@ -1,12 +1,12 @@
-// use simple_logger::SimpleLogger;
+use simple_logger::SimpleLogger;
 use std::env;
 use std::time::SystemTime;
 use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() {
-    // output *all* log messages, including from underlying transport
-    // SimpleLogger::new().env().init().unwrap();
+    // logging controlled by the RUST_LOG environment variable
+    SimpleLogger::new().env().init().unwrap();
 
     let host = env::var("TRITIUM_HOST").unwrap_or("localhost".to_string());
 
@@ -26,7 +26,7 @@ async fn main() {
     loop {
         let t = seconds_since_unix_epoch();
         let message = format!("The remote time is now {t}s since the start of 1970");
-        println!("posting to channel \"talking_clock\": {message}");
+        log::info!("posting to channel \"talking_clock\": {message}");
         tritium
             .post_message("talking_clock", message)
             .await

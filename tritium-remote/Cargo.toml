@@ -1,6 +1,6 @@
 [package]
 name = "tritium_remote"
-version = "1.4.1"
+version = "1.5.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Engineered Arts Ltd"]
@@ -8,21 +8,20 @@ homepage = "https://www.engineeredarts.co.uk/software/tritium/"
 description = "A library for connecting to remote Robots running TritiumOS"
 readme = "../README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.38", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-stream = "0.1"
-tungstenite = { version = "0.17" }
-async-tungstenite = { version = "0.18", features=["tokio-runtime"] }
+tungstenite = { version = "0.23" }
+async-tungstenite = { version = "0.26", features=["tokio-runtime"] }
 futures = "0.3"
 futures-util = "0.3"
 thiserror = "1.0"
-graphql_client = "0.11"
+graphql_client = "0.14"
 serde = "1.0"
 serde_json = "1.0"
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.8", features = ["v4"] }
 log = "0.4"
 
 [dev-dependencies]
-simple_logger = "4"
+simple_logger = { version="4", features=["timestamps", "colors"] }

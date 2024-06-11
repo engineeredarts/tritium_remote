@@ -1,12 +1,12 @@
-// use simple_logger::SimpleLogger;
+use simple_logger::SimpleLogger;
 use std::env;
 
 use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    // output *all* log messages, including from underlying transport
-    // SimpleLogger::new().env().init().unwrap();
+    // logging controlled by the RUST_LOG environment variable
+    SimpleLogger::new().env().init().unwrap();
 
     let auth_token =
         env::var("TRITIUM_AUTH_TOKEN").expect("TRITIUM_AUTH_TOKEN environment variable not set");
@@ -29,7 +29,7 @@ async fn main() {
         }    
     ";
 
-    println!("Document: {document}");
+    log::info!("Document: {document}");
 
     let variables = json!( {
         "input": {
@@ -37,12 +37,12 @@ async fn main() {
             "path": "start_stop.py"
         }
     });
-    println!("Variables: {variables:?}");
+    log::info!("Variables: {variables:?}");
 
     let result = tritium
         .query(&document, Some(variables))
         .await
         .expect("query failed");
 
-    println!("Result: {result:?}");
+    log::info!("Result: {result:?}");
 }
