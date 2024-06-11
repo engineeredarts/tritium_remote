@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import asyncio
 import tritium_remote
@@ -9,7 +11,7 @@ async def main():
 
     print("connecting...")
     tritium = await tritium_remote.connect(
-        f"ws://{host}:1234", auth_token, "Python tritium-remote example - list hosts"
+        f"ws://{host}:1234", auth_token, "Python tritium-remote example - generic query (list hosts)"
     )
 
     document = """

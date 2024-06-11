@@ -24,27 +24,27 @@ build_and_test:
     - cargo build
     - cargo test
 
-build_py:
-  stage: check
-  image: quay.io/pypa/manylinux2014_x86_64
-  before_script:
-    # I don't know why, but maturin wants "python3" to be available
-    # this docker image has several python versions as python3.7 etc already
-    # maturin picks them up, but errors if python3 (3.6) isn't available
-    # to add insult to injury PyO3/maturin doesn't even support 3.6 :shrug:
-    - yum install -y cargo
-    - python3.11 -m pip install --user maturin
-    - /root/.local/bin/maturin list-python
-  script:
-    - cd py-tritium-remote
-    - /root/.local/bin/maturin build --interpreter python3.7
-    - /root/.local/bin/maturin build --interpreter python3.8
-    - /root/.local/bin/maturin build --interpreter python3.9
-    - /root/.local/bin/maturin build --interpreter python3.10
-    - /root/.local/bin/maturin build --interpreter python3.11
-  artifacts:
-    paths:
-      - target/wheels
+# build_py:
+#   stage: check
+#   image: quay.io/pypa/manylinux2014_x86_64
+#   before_script:
+#     # I don't know why, but maturin wants "python3" to be available
+#     # this docker image has several python versions as python3.7 etc already
+#     # maturin picks them up, but errors if python3 (3.6) isn't available
+#     # to add insult to injury PyO3/maturin doesn't even support 3.6 :shrug:
+#     - yum install -y cargo
+#     - python3.11 -m pip install --user maturin
+#     - /root/.local/bin/maturin list-python
+#   script:
+#     - cd py-tritium-remote
+#     - /root/.local/bin/maturin build --interpreter python3.7
+#     - /root/.local/bin/maturin build --interpreter python3.8
+#     - /root/.local/bin/maturin build --interpreter python3.9
+#     - /root/.local/bin/maturin build --interpreter python3.10
+#     - /root/.local/bin/maturin build --interpreter python3.11
+#   artifacts:
+#     paths:
+#       - target/wheels
 
 fmt_rust:
   stage: check
@@ -54,14 +54,14 @@ fmt_rust:
   script:
     - cargo fmt --all -- --check
 
-fmt_py:
-  stage: check
-  image: python:3.11.0-alpine3.15
-  before_script:
-    - pip install black
-  script:
-      # We have to specify files with no extension exactly
-    - black --check .
+# fmt_py:
+#   stage: check
+#   image: python:3.11.0-alpine3.15
+#   before_script:
+#     - pip install black
+#   script:
+#       # We have to specify files with no extension exactly
+#     - black --check .
 
 docs_rust:
   stage: docs
@@ -74,18 +74,18 @@ docs_rust:
     paths:
       - target/doc
 
-docs_python:
-  stage: docs
-  image: quay.io/pypa/manylinux2014_x86_64
-  dependencies: [build_py]
-  before_script:
-    - python3.11 -m pip install pdoc
-    - python3.11 -m pip install target/wheels/*-cp311-*.whl
-  script:
-    - python3.11 -m pdoc tritium_remote -o doc
-  artifacts:
-    paths:
-      - doc
+# docs_python:
+#   stage: docs
+#   image: quay.io/pypa/manylinux2014_x86_64
+#   dependencies: [build_py]
+#   before_script:
+#     - python3.11 -m pip install pdoc
+#     - python3.11 -m pip install target/wheels/*-cp311-*.whl
+#   script:
+#     - python3.11 -m pdoc tritium_remote -o doc
+#   artifacts:
+#     paths:
+#       - doc
 
 publish_rust:
   stage: publish
@@ -97,41 +97,41 @@ publish_rust:
     - if: '$CI_COMMIT_REF_NAME == "main"'
     - when: never
 
-publish_python:
-  stage: publish
-  image: quay.io/pypa/manylinux2014_x86_64
-  dependencies: [build_py]
-  variables:
-    TWINE_USERNAME: __token__
-  before_script:
-    - python3.11 -m pip install --user twine
-  script:
-    # - python3.11 -m twine upload -r testpypi target/wheels/*.whl
-    - python3.11 -m twine upload target/wheels/*.whl
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-    - when: never
+# publish_python:
+#   stage: publish
+#   image: quay.io/pypa/manylinux2014_x86_64
+#   dependencies: [build_py]
+#   variables:
+#     TWINE_USERNAME: __token__
+#   before_script:
+#     - python3.11 -m pip install --user twine
+#   script:
+#     # - python3.11 -m twine upload -r testpypi target/wheels/*.whl
+#     - python3.11 -m twine upload target/wheels/*.whl
+#   rules:
+#     - if: '$CI_COMMIT_REF_NAME == "main"'
+#     - when: never
 
-publish_python_docs:
-  stage: publish
-  image: quay.io/pypa/manylinux2014_x86_64
-  needs: [docs_python, publish_python]
-  dependencies: [docs_python]
-  variables:
-    TWINE_USERNAME: __token__
-  before_script:
-    - yum install -y jq
-    - python3.11 -m pip install --user yq
-    - git config --global user.email noreply@engineeredarts.co.uk
-    - git config --global user.name "gitlab-ci"
-  script:
-    - VERSION=$(/root/.local/bin/tomlq -r .package.version py-tritium-remote/Cargo.toml)
-    - git clone https://${CI_SERVER_HOST}/tritium/api_docs docs_repo
-    - mkdir -p docs_repo/generated/python/tritium_remote/${VERSION}
-    - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
-    - git -C docs_repo add -A
-    - git -C docs_repo commit -m "Gitlab CI auto-generated documentation"
-    - git -C docs_repo push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/api_docs.git
-  rules:
-    - if: '$CI_COMMIT_REF_NAME == "main"'
-    - when: never
+# publish_python_docs:
+#   stage: publish
+#   image: quay.io/pypa/manylinux2014_x86_64
+#   needs: [docs_python, publish_python]
+#   dependencies: [docs_python]
+#   variables:
+#     TWINE_USERNAME: __token__
+#   before_script:
+#     - yum install -y jq
+#     - python3.11 -m pip install --user yq
+#     - git config --global user.email noreply@engineeredarts.co.uk
+#     - git config --global user.name "gitlab-ci"
+#   script:
+#     - VERSION=$(/root/.local/bin/tomlq -r .package.version py-tritium-remote/Cargo.toml)
+#     - git clone https://${CI_SERVER_HOST}/tritium/api_docs docs_repo
+#     - mkdir -p docs_repo/generated/python/tritium_remote/${VERSION}
+#     - cp -r doc/* docs_repo/generated/python/tritium_remote/${VERSION}
+#     - git -C docs_repo add -A
+#     - git -C docs_repo commit -m "Gitlab CI auto-generated documentation"
+#     - git -C docs_repo push https://gitlab-ci:${GITLAB_ACCESS_TOKEN_FOR_DOCS_COMMIT}@${CI_SERVER_HOST}/tritium/api_docs.git
+#   rules:
+#     - if: '$CI_COMMIT_REF_NAME == "main"'
+#     - when: never

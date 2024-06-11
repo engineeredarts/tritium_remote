@@ -1,10 +1,10 @@
-// use simple_logger::SimpleLogger;
+use simple_logger::SimpleLogger;
 use std::env;
 
 #[tokio::main]
 async fn main() {
-    // output *all* log messages, including from underlying transport
-    // SimpleLogger::new().env().init().unwrap();
+    // logging controlled by the RUST_LOG environment variable
+    SimpleLogger::new().env().init().unwrap();
 
     let host = env::var("TRITIUM_HOST").unwrap_or("localhost".to_string());
 
@@ -26,11 +26,11 @@ async fn main() {
         .await
         .expect("query failed");
 
-    println!("System info:");
-    println!("  serial: {}", system_info.serial);
-    println!(
+    log::info!("System info:");
+    log::info!("  serial: {}", system_info.serial);
+    log::info!(
         "  name: {}",
         system_info.name.unwrap_or("(no name)".to_string())
     );
-    println!("  version: {}", system_info.version);
+    log::info!("  version: {}", system_info.version);
 }

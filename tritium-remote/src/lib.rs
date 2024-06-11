@@ -1,7 +1,6 @@
 mod client;
 mod graphql;
 mod protocol;
-mod tokio_spawner;
 
 mod tritium;
 

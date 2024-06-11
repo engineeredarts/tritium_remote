@@ -1,9 +1,13 @@
+use simple_logger::SimpleLogger;
 use std::env;
 
 const SCRIPT_PATH: &str = "start_stop.py";
 
 #[tokio::main]
 async fn main() {
+    // logging controlled by the RUST_LOG environment variable
+    SimpleLogger::new().env().init().unwrap();
+
     let host = env::var("TRITIUM_HOST").unwrap_or("localhost".to_string());
 
     let auth_token =
@@ -19,11 +23,11 @@ async fn main() {
     .await
     .expect("failed to connect");
 
-    println!("Starting script {}", SCRIPT_PATH);
+    log::info!("Starting script {}", SCRIPT_PATH);
     let script = tritium
         .start_script(SCRIPT_PATH)
         .await
         .expect("trigger script mutation failed");
 
-    println!("OK, start_script returned: {:?}", script);
+    log::info!("OK, start_script returned: {:?}", script);
 }
