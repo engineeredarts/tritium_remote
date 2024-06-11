@@ -7,7 +7,7 @@ A library for interacting with Tritium systems. [Hosted docs are here](https://d
 
 Implemented in Rust with bindings to other languages:
 
-- [Python](https://pypi.org/project/tritium-remote/) *NB* DEPRECATED in favour of the pure Python `tritium-remote-py`
+- [Python](https://pypi.org/project/tritium-remote/) *NB* **DEPRECATED** in favour of the pure Python `tritium-remote-py`
 
 This library is currently only published and tested on Linux. However the rust crate ought to work on other platforms.
 
