@@ -1,6 +1,6 @@
 # tritium_remote
 
-A library for interacting with Tritium systems. [Hosted docs are here](https://docs.engineeredarts.co.uk/en/Robot_Systems/Software/Remote/Tritium_Remote) (require login).
+A library for interacting with Tritium systems. [Hosted docs are here](https://docs.engineeredarts.co.uk/en/user/tritium_remote) (require login).
 
 - Connects to a running Tritium system by WebSocket
 - Uses GraphQL to send commands and request data
